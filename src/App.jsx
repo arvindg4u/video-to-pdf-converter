@@ -1,6 +1,11 @@
-import { useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { jsPDF } from 'jspdf'
 import './App.css'
+
+const THEME_KEY = 'theme'
+const MAX_VIDEOS = 20
+const MAX_FRAMES = 1000
+const ACCEPTED_VIDEO_TYPE = 'video/mp4'
 
 function App() {
   const [files, setFiles] = useState([])
@@ -11,38 +16,56 @@ function App() {
   const [currentVideo, setCurrentVideo] = useState(0)
   const [totalFrames, setTotalFrames] = useState(0)
   const [processedFrames, setProcessedFrames] = useState(0)
+  const [dragActive, setDragActive] = useState(false)
+  const [theme, setTheme] = useState('light')
 
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files)
-    
-    if (selectedFiles.length > 20) {
-      setError('Maximum 20 videos upload kar sakte ho!')
+  const fileInputRef = useRef(null)
+  const progressRef = useRef(0)
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(THEME_KEY)
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light')
+    setTheme(initialTheme)
+    document.documentElement.setAttribute('data-theme', initialTheme)
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(nextTheme)
+    localStorage.setItem(THEME_KEY, nextTheme)
+    document.documentElement.setAttribute('data-theme', nextTheme)
+  }
+
+  const validateAndSetFiles = (selectedFiles) => {
+    if (selectedFiles.length > MAX_VIDEOS) {
+      setError(`Maximum ${MAX_VIDEOS} videos upload kar sakte ho!`)
       return
     }
 
-    const validFiles = selectedFiles.filter(file => file.type === 'video/mp4')
-    
+    const validFiles = selectedFiles.filter((file) => file.type === ACCEPTED_VIDEO_TYPE)
+
     if (validFiles.length !== selectedFiles.length) {
       setError('Sirf .mp4 video files upload kar sakte ho!')
     }
-    
+
     if (validFiles.length > 0) {
       setFiles(validFiles)
       setError('')
     }
   }
 
-  const removeFile = (index) => {
-    setFiles(files.filter((_, i) => i !== index))
+  const handleFileChange = (e) => validateAndSetFiles(Array.from(e.target.files || []))
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setDragActive(false)
+    if (!loading) {
+      validateAndSetFiles(Array.from(e.dataTransfer.files || []))
+    }
   }
 
-  const captureFrame = (video, canvas) => {
-    const ctx = canvas.getContext('2d')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/jpeg', 0.95)
-  }
+  const removeFile = (index) => setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index))
 
   const seekToTime = (video, time) => {
     return new Promise((resolve) => {
@@ -51,10 +74,29 @@ function App() {
     })
   }
 
-  const processVideo = async (file, canvas) => {
+  const estimateTotalFrames = async (selectedFiles) => {
+    let estimated = 0
+
+    for (const file of selectedFiles) {
+      const video = document.createElement('video')
+      const videoUrl = URL.createObjectURL(file)
+      video.src = videoUrl
+      video.preload = 'metadata'
+
+      await new Promise((resolve) => {
+        video.onloadedmetadata = resolve
+      })
+
+      estimated += Math.floor(video.duration * fps)
+      URL.revokeObjectURL(videoUrl)
+    }
+
+    return estimated
+  }
+
+  const addVideoFramesToPdf = async (file, canvas, pdf) => {
     const video = document.createElement('video')
     const videoUrl = URL.createObjectURL(file)
-    
     video.src = videoUrl
     video.preload = 'metadata'
 
@@ -64,40 +106,48 @@ function App() {
     })
 
     const duration = video.duration
-    const interval = 1 / fps
     const frameCount = Math.floor(duration * fps)
+    const interval = 1 / fps
 
     if (frameCount === 0) {
       URL.revokeObjectURL(videoUrl)
       throw new Error(`${file.name} bahut chhoti hai!`)
     }
 
-    const frames = []
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
 
     for (let i = 0; i < frameCount; i++) {
       const time = i * interval
       await seekToTime(video, time)
-      await new Promise(resolve => setTimeout(resolve, 50))
-      
-      const frameData = captureFrame(video, canvas)
-      frames.push({
-        data: frameData,
-        width: video.videoWidth,
-        height: video.videoHeight,
-        videoName: file.name,
-        timestamp: time.toFixed(2)
-      })
-      
-      setProcessedFrames(prev => prev + 1)
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const frameData = canvas.toDataURL('image/jpeg', 0.9)
+
+      pdf.addPage([video.videoWidth, video.videoHeight])
+      pdf.addImage(frameData, 'JPEG', 0, 0, video.videoWidth, video.videoHeight)
+      pdf.setFontSize(12)
+      pdf.setTextColor(255, 255, 255)
+      pdf.text(`${file.name} - ${time.toFixed(2)}s`, 10, 20)
+
+      progressRef.current += 1
+
+      if (progressRef.current % 5 === 0 || progressRef.current === totalFrames) {
+        setProcessedFrames(progressRef.current)
+      }
+
+      if (progressRef.current % 25 === 0) {
+        setProgress(`Frames process: ${progressRef.current}/${totalFrames}`)
+      }
     }
 
     URL.revokeObjectURL(videoUrl)
-    return frames
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (files.length === 0) {
       setError('Pehle video files select karo!')
       return
@@ -108,76 +158,39 @@ function App() {
     setError('')
     setCurrentVideo(0)
     setProcessedFrames(0)
+    progressRef.current = 0
 
     try {
-      const canvas = document.createElement('canvas')
-      const allFrames = []
-
-      let estimatedTotalFrames = 0
-      for (const file of files) {
-        const video = document.createElement('video')
-        const videoUrl = URL.createObjectURL(file)
-        video.src = videoUrl
-        video.preload = 'metadata'
-        
-        await new Promise((resolve) => {
-          video.onloadedmetadata = resolve
-        })
-        
-        estimatedTotalFrames += Math.floor(video.duration * fps)
-        URL.revokeObjectURL(videoUrl)
-      }
-      
+      const estimatedTotalFrames = await estimateTotalFrames(files)
       setTotalFrames(estimatedTotalFrames)
 
-      if (estimatedTotalFrames > 1000) {
+      if (estimatedTotalFrames > MAX_FRAMES) {
         throw new Error('Bahut zyada frames! FPS kam karo ya kam videos use karo.')
       }
+
+      const canvas = document.createElement('canvas')
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px' })
+      pdf.deletePage(1)
 
       for (let i = 0; i < files.length; i++) {
         setCurrentVideo(i + 1)
         setProgress(`Video ${i + 1}/${files.length} process ho rahi hai...`)
-        
-        const frames = await processVideo(files[i], canvas)
-        allFrames.push(...frames)
+        await addVideoFramesToPdf(files[i], canvas, pdf)
       }
 
-      setProgress('PDF generate ho rahi hai...')
-
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px'
-      })
-
-      pdf.deletePage(1)
-
-      for (let i = 0; i < allFrames.length; i++) {
-        const frame = allFrames[i]
-        
-        pdf.addPage([frame.width, frame.height])
-        pdf.addImage(frame.data, 'JPEG', 0, 0, frame.width, frame.height)
-        
-        pdf.setFontSize(12)
-        pdf.setTextColor(255, 255, 255)
-        pdf.text(`${frame.videoName} - ${frame.timestamp}s`, 10, 20)
-        
-        if ((i + 1) % 10 === 0) {
-          setProgress(`PDF generate ho rahi hai: ${i + 1}/${allFrames.length}`)
-        }
-      }
-
+      setProcessedFrames(progressRef.current)
       setProgress('PDF download ho rahi hai...')
       pdf.save(`merged-videos-${Date.now()}.pdf`)
 
-      setProgress(`✅ ${allFrames.length} frames ki PDF successfully download ho gayi! 🎉`)
+      setProgress(`✅ ${progressRef.current} frames ki PDF successfully download ho gayi! 🎉`)
+
       setTimeout(() => {
         setProgress('')
         setFiles([])
         setCurrentVideo(0)
         setTotalFrames(0)
         setProcessedFrames(0)
-      }, 3000)
-
+      }, 2200)
     } catch (err) {
       console.error('Error:', err)
       setError(`Error: ${err.message || 'Kuch galat ho gaya. Phir se try karo!'}`)
@@ -186,74 +199,69 @@ function App() {
     }
   }
 
-  return (
-    <div className="container">
-      <div className="header">
-        <h1>🎬 Video to PDF Converter</h1>
-        <p className="subtitle">Multiple Videos • Single PDF • 100% Browser-Based</p>
-      </div>
+  const totalSizeInMb = useMemo(
+    () => (files.reduce((acc, file) => acc + file.size, 0) / (1024 * 1024)).toFixed(2),
+    [files]
+  )
 
-      <form onSubmit={handleSubmit} className="form">
-        <div className="upload-section">
-          <label htmlFor="video-upload" className="upload-label">
-            {files.length > 0 ? (
-              <div className="file-info">
-                <span>📹</span>
-                <span>{files.length} video{files.length > 1 ? 's' : ''} selected</span>
-                <span className="file-size">
-                  {(files.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB
-                </span>
-              </div>
-            ) : (
-              <div className="upload-placeholder">
-                <span>📤</span>
-                <span>Videos Upload Karo (.mp4)</span>
-                <span className="hint">Maximum 20 videos ek saath</span>
-              </div>
-            )}
-          </label>
+  const progressPercent = useMemo(() => {
+    if (!totalFrames) return 0
+    return Math.round((processedFrames / totalFrames) * 100)
+  }, [processedFrames, totalFrames])
+
+  return (
+    <div className="app-shell">
+      <header className="hero-header panel">
+        <div>
+          <p className="meta">Performance-optimized converter</p>
+          <h1>🎥 MotionFrames PDF Lab</h1>
+          <p className="headline">Lag kam, rendering smooth, aur naya fast theme system ⚡</p>
+        </div>
+        <button type="button" className="theme-btn" onClick={toggleTheme}>
+          {theme === 'light' ? 'Switch Dark' : 'Switch Light'}
+        </button>
+      </header>
+
+      <section className="kpi-grid">
+        <article className="kpi panel"><span>Videos</span><strong>{files.length}/{MAX_VIDEOS}</strong></article>
+        <article className="kpi panel"><span>Total Size</span><strong>{totalSizeInMb} MB</strong></article>
+        <article className="kpi panel"><span>FPS</span><strong>{fps}</strong></article>
+        <article className="kpi panel"><span>Engine</span><strong>{loading ? 'Active' : 'Idle'}</strong></article>
+      </section>
+
+      <form onSubmit={handleSubmit} className="layout-grid">
+        <section
+          className="upload-panel panel"
+          onDragEnter={(e) => {
+            e.preventDefault()
+            if (!loading) setDragActive(true)
+          }}
+          onDragOver={(e) => e.preventDefault()}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+        >
+          <h2>Upload Matrix</h2>
           <input
+            ref={fileInputRef}
             id="video-upload"
             type="file"
-            accept="video/mp4"
+            accept={ACCEPTED_VIDEO_TYPE}
             multiple
             onChange={handleFileChange}
             disabled={loading}
           />
-        </div>
-
-        {files.length > 0 && (
-          <div className="files-list">
-            <h3>Selected Videos ({files.length}/20):</h3>
-            <div className="files-grid">
-              {files.map((file, index) => (
-                <div key={index} className="file-item">
-                  <span className="file-name">
-                    {index + 1}. {file.name}
-                  </span>
-                  <span className="file-size-small">
-                    {(file.size / (1024 * 1024)).toFixed(1)} MB
-                  </span>
-                  {!loading && (
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="remove-btn"
-                      title="Remove"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+          <div className={`drop-zone ${dragActive ? 'active' : ''}`}>
+            <p>{dragActive ? 'Drop now 🔥' : 'Drag & Drop .mp4 videos'}</p>
+            <button type="button" className="secondary-btn" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+              Browse Files
+            </button>
+            <small>max {MAX_VIDEOS} files</small>
           </div>
-        )}
+        </section>
 
-        <div className="fps-section">
-          <label htmlFor="fps-select">
-            Frames Per Second (FPS): <strong>{fps}</strong>
-          </label>
+        <section className="controls-panel panel">
+          <h2>Frame Controller</h2>
+          <label htmlFor="fps-select">Frames per second: <strong>{fps}</strong></label>
           <input
             id="fps-select"
             type="range"
@@ -261,62 +269,60 @@ function App() {
             max="6"
             value={fps}
             onChange={(e) => setFps(Number(e.target.value))}
-            disabled={loading}
             className="fps-slider"
+            disabled={loading}
           />
-          <div className="fps-labels">
-            <span>1</span>
-            <span>2</span>
-            <span>3</span>
-            <span>4</span>
-            <span>5</span>
-            <span>6</span>
-          </div>
-        </div>
+          <div className="scale"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
 
-        {loading && totalFrames > 0 && (
-          <div className="progress-details">
-            <div className="progress-bar-container">
-              <div 
-                className="progress-bar-fill" 
-                style={{ width: `${(processedFrames / totalFrames) * 100}%` }}
-              />
+          {loading && totalFrames > 0 && (
+            <div className="live-progress">
+              <div className="bar"><div className="fill" style={{ width: `${progressPercent}%` }} /></div>
+              <p>{progressPercent}% • Video {currentVideo}/{files.length} • {processedFrames}/{totalFrames} frames</p>
             </div>
-            <div className="progress-stats">
-              <span>Video: {currentVideo}/{files.length}</span>
-              <span>Frames: {processedFrames}/{totalFrames}</span>
-              <span>{Math.round((processedFrames / totalFrames) * 100)}%</span>
+          )}
+
+          <button type="submit" className="primary-btn" disabled={loading || files.length === 0}>
+            {loading ? 'Processing...' : 'Generate PDF'}
+          </button>
+        </section>
+
+        <section className="queue-panel panel">
+          <h2>Queue Lane</h2>
+          {files.length === 0 ? (
+            <p className="muted">Abhi queue empty hai.</p>
+          ) : (
+            <div className="queue-list">
+              {files.map((file, index) => (
+                <article key={`${file.name}-${index}`} className="queue-item">
+                  <div>
+                    <p>{index + 1}. {file.name}</p>
+                    <small>{(file.size / (1024 * 1024)).toFixed(1)} MB</small>
+                  </div>
+                  {!loading && <button type="button" className="remove-btn" onClick={() => removeFile(index)}>✕</button>}
+                </article>
+              ))}
             </div>
-          </div>
+          )}
+        </section>
+
+        <section className="status-panel panel">
+          <h2>Pipeline Notes</h2>
+          <ul>
+            <li>1) Upload videos</li>
+            <li>2) Set FPS</li>
+            <li>3) Start converter</li>
+            <li>4) PDF auto-download</li>
+          </ul>
+          <div className="tags"><span>Private</span><span>No backend</span><span>Adaptive UI</span></div>
+        </section>
+
+        {(progress || error) && (
+          <section className="feedback-panel panel">
+            {progress && <div className="notice ok">{progress}</div>}
+            {error && <div className="notice fail">{error}</div>}
+          </section>
         )}
-
-        <button 
-          type="submit" 
-          disabled={loading || files.length === 0} 
-          className="submit-btn"
-        >
-          {loading ? '⏳ Processing...' : '🚀 Merge & Generate PDF'}
-        </button>
-
-        {progress && <div className="progress">{progress}</div>}
-        {error && <div className="error">{error}</div>}
       </form>
-
-      <div className="info">
-        <p>💡 <strong>Kaise kaam karta hai:</strong></p>
-        <ol>
-          <li>Multiple .mp4 videos upload karo (max 20)</li>
-          <li>FPS select karo (1-6)</li>
-          <li>Sabhi videos ke frames ek single PDF mein merge honge</li>
-          <li>PDF download karo!</li>
-        </ol>
-        <div className="features">
-          <span className="badge">✅ Multiple Videos</span>
-          <span className="badge">✅ Single PDF</span>
-          <span className="badge">✅ Zero Server</span>
-          <span className="badge">✅ Privacy First</span>
-        </div>
-      </div>
     </div>
   )
 }
