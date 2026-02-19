@@ -3,6 +3,9 @@ import { jsPDF } from 'jspdf'
 import './App.css'
 
 const THEME_KEY = 'theme'
+const MAX_VIDEOS = 20
+const MAX_FRAMES = 1000
+const ACCEPTED_VIDEO_TYPE = 'video/mp4'
 
 function App() {
   const [files, setFiles] = useState([])
@@ -15,7 +18,9 @@ function App() {
   const [processedFrames, setProcessedFrames] = useState(0)
   const [dragActive, setDragActive] = useState(false)
   const [theme, setTheme] = useState('light')
+
   const fileInputRef = useRef(null)
+  const progressRef = useRef(0)
 
   useEffect(() => {
     const savedTheme = localStorage.getItem(THEME_KEY)
@@ -33,12 +38,12 @@ function App() {
   }
 
   const validateAndSetFiles = (selectedFiles) => {
-    if (selectedFiles.length > 20) {
-      setError('Maximum 20 videos upload kar sakte ho!')
+    if (selectedFiles.length > MAX_VIDEOS) {
+      setError(`Maximum ${MAX_VIDEOS} videos upload kar sakte ho!`)
       return
     }
 
-    const validFiles = selectedFiles.filter((file) => file.type === 'video/mp4')
+    const validFiles = selectedFiles.filter((file) => file.type === ACCEPTED_VIDEO_TYPE)
 
     if (validFiles.length !== selectedFiles.length) {
       setError('Sirf .mp4 video files upload kar sakte ho!')
@@ -60,15 +65,7 @@ function App() {
     }
   }
 
-  const removeFile = (index) => setFiles(files.filter((_, i) => i !== index))
-
-  const captureFrame = (video, canvas) => {
-    const ctx = canvas.getContext('2d')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/jpeg', 0.95)
-  }
+  const removeFile = (index) => setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index))
 
   const seekToTime = (video, time) => {
     return new Promise((resolve) => {
@@ -77,7 +74,27 @@ function App() {
     })
   }
 
-  const processVideo = async (file, canvas) => {
+  const estimateTotalFrames = async (selectedFiles) => {
+    let estimated = 0
+
+    for (const file of selectedFiles) {
+      const video = document.createElement('video')
+      const videoUrl = URL.createObjectURL(file)
+      video.src = videoUrl
+      video.preload = 'metadata'
+
+      await new Promise((resolve) => {
+        video.onloadedmetadata = resolve
+      })
+
+      estimated += Math.floor(video.duration * fps)
+      URL.revokeObjectURL(videoUrl)
+    }
+
+    return estimated
+  }
+
+  const addVideoFramesToPdf = async (file, canvas, pdf) => {
     const video = document.createElement('video')
     const videoUrl = URL.createObjectURL(file)
     video.src = videoUrl
@@ -88,7 +105,8 @@ function App() {
       video.onerror = reject
     })
 
-    const frameCount = Math.floor(video.duration * fps)
+    const duration = video.duration
+    const frameCount = Math.floor(duration * fps)
     const interval = 1 / fps
 
     if (frameCount === 0) {
@@ -96,26 +114,35 @@ function App() {
       throw new Error(`${file.name} bahut chhoti hai!`)
     }
 
-    const frames = []
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
 
     for (let i = 0; i < frameCount; i++) {
       const time = i * interval
       await seekToTime(video, time)
-      await new Promise((resolve) => setTimeout(resolve, 40))
 
-      const frameData = captureFrame(video, canvas)
-      frames.push({
-        data: frameData,
-        width: video.videoWidth,
-        height: video.videoHeight,
-        videoName: file.name,
-        timestamp: time.toFixed(2)
-      })
-      setProcessedFrames((prev) => prev + 1)
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const frameData = canvas.toDataURL('image/jpeg', 0.9)
+
+      pdf.addPage([video.videoWidth, video.videoHeight])
+      pdf.addImage(frameData, 'JPEG', 0, 0, video.videoWidth, video.videoHeight)
+      pdf.setFontSize(12)
+      pdf.setTextColor(255, 255, 255)
+      pdf.text(`${file.name} - ${time.toFixed(2)}s`, 10, 20)
+
+      progressRef.current += 1
+
+      if (progressRef.current % 5 === 0 || progressRef.current === totalFrames) {
+        setProcessedFrames(progressRef.current)
+      }
+
+      if (progressRef.current % 25 === 0) {
+        setProgress(`Frames process: ${progressRef.current}/${totalFrames}`)
+      }
     }
 
     URL.revokeObjectURL(videoUrl)
-    return frames
   }
 
   const handleSubmit = async (e) => {
@@ -131,60 +158,31 @@ function App() {
     setError('')
     setCurrentVideo(0)
     setProcessedFrames(0)
+    progressRef.current = 0
 
     try {
-      const canvas = document.createElement('canvas')
-      const allFrames = []
-
-      let estimatedTotalFrames = 0
-      for (const file of files) {
-        const video = document.createElement('video')
-        const videoUrl = URL.createObjectURL(file)
-        video.src = videoUrl
-        video.preload = 'metadata'
-
-        await new Promise((resolve) => {
-          video.onloadedmetadata = resolve
-        })
-
-        estimatedTotalFrames += Math.floor(video.duration * fps)
-        URL.revokeObjectURL(videoUrl)
-      }
-
+      const estimatedTotalFrames = await estimateTotalFrames(files)
       setTotalFrames(estimatedTotalFrames)
 
-      if (estimatedTotalFrames > 1000) {
+      if (estimatedTotalFrames > MAX_FRAMES) {
         throw new Error('Bahut zyada frames! FPS kam karo ya kam videos use karo.')
       }
+
+      const canvas = document.createElement('canvas')
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px' })
+      pdf.deletePage(1)
 
       for (let i = 0; i < files.length; i++) {
         setCurrentVideo(i + 1)
         setProgress(`Video ${i + 1}/${files.length} process ho rahi hai...`)
-        const frames = await processVideo(files[i], canvas)
-        allFrames.push(...frames)
+        await addVideoFramesToPdf(files[i], canvas, pdf)
       }
 
-      setProgress('PDF generate ho rahi hai...')
-
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px' })
-      pdf.deletePage(1)
-
-      for (let i = 0; i < allFrames.length; i++) {
-        const frame = allFrames[i]
-        pdf.addPage([frame.width, frame.height])
-        pdf.addImage(frame.data, 'JPEG', 0, 0, frame.width, frame.height)
-        pdf.setFontSize(12)
-        pdf.setTextColor(255, 255, 255)
-        pdf.text(`${frame.videoName} - ${frame.timestamp}s`, 10, 20)
-
-        if ((i + 1) % 10 === 0) {
-          setProgress(`PDF generate ho rahi hai: ${i + 1}/${allFrames.length}`)
-        }
-      }
-
+      setProcessedFrames(progressRef.current)
       setProgress('PDF download ho rahi hai...')
       pdf.save(`merged-videos-${Date.now()}.pdf`)
-      setProgress(`✅ ${allFrames.length} frames ki PDF successfully download ho gayi! 🎉`)
+
+      setProgress(`✅ ${progressRef.current} frames ki PDF successfully download ho gayi! 🎉`)
 
       setTimeout(() => {
         setProgress('')
@@ -192,7 +190,7 @@ function App() {
         setCurrentVideo(0)
         setTotalFrames(0)
         setProcessedFrames(0)
-      }, 2500)
+      }, 2200)
     } catch (err) {
       console.error('Error:', err)
       setError(`Error: ${err.message || 'Kuch galat ho gaya. Phir se try karo!'}`)
@@ -207,17 +205,17 @@ function App() {
   )
 
   const progressPercent = useMemo(() => {
-    if (totalFrames === 0) return 0
+    if (!totalFrames) return 0
     return Math.round((processedFrames / totalFrames) * 100)
   }, [processedFrames, totalFrames])
 
   return (
     <div className="app-shell">
-      <header className="hero-header glass-card">
+      <header className="hero-header panel">
         <div>
-          <p className="meta">Performance-first converter</p>
+          <p className="meta">Performance-optimized converter</p>
           <h1>🎥 MotionFrames PDF Lab</h1>
-          <p className="headline">Naya gradient-based premium interface, faster feel, aur clean multi-device UX.</p>
+          <p className="headline">Lag kam, rendering smooth, aur naya fast theme system ⚡</p>
         </div>
         <button type="button" className="theme-btn" onClick={toggleTheme}>
           {theme === 'light' ? 'Switch Dark' : 'Switch Light'}
@@ -225,15 +223,15 @@ function App() {
       </header>
 
       <section className="kpi-grid">
-        <article className="kpi glass-card"><span>Videos</span><strong>{files.length}/20</strong></article>
-        <article className="kpi glass-card"><span>Total Size</span><strong>{totalSizeInMb} MB</strong></article>
-        <article className="kpi glass-card"><span>FPS</span><strong>{fps}</strong></article>
-        <article className="kpi glass-card"><span>Engine</span><strong>{loading ? 'Active' : 'Idle'}</strong></article>
+        <article className="kpi panel"><span>Videos</span><strong>{files.length}/{MAX_VIDEOS}</strong></article>
+        <article className="kpi panel"><span>Total Size</span><strong>{totalSizeInMb} MB</strong></article>
+        <article className="kpi panel"><span>FPS</span><strong>{fps}</strong></article>
+        <article className="kpi panel"><span>Engine</span><strong>{loading ? 'Active' : 'Idle'}</strong></article>
       </section>
 
       <form onSubmit={handleSubmit} className="layout-grid">
         <section
-          className="upload-panel glass-card"
+          className="upload-panel panel"
           onDragEnter={(e) => {
             e.preventDefault()
             if (!loading) setDragActive(true)
@@ -247,7 +245,7 @@ function App() {
             ref={fileInputRef}
             id="video-upload"
             type="file"
-            accept="video/mp4"
+            accept={ACCEPTED_VIDEO_TYPE}
             multiple
             onChange={handleFileChange}
             disabled={loading}
@@ -257,11 +255,11 @@ function App() {
             <button type="button" className="secondary-btn" onClick={() => fileInputRef.current?.click()} disabled={loading}>
               Browse Files
             </button>
-            <small>max 20 files</small>
+            <small>max {MAX_VIDEOS} files</small>
           </div>
         </section>
 
-        <section className="controls-panel glass-card">
+        <section className="controls-panel panel">
           <h2>Frame Controller</h2>
           <label htmlFor="fps-select">Frames per second: <strong>{fps}</strong></label>
           <input
@@ -288,14 +286,14 @@ function App() {
           </button>
         </section>
 
-        <section className="queue-panel glass-card">
+        <section className="queue-panel panel">
           <h2>Queue Lane</h2>
           {files.length === 0 ? (
             <p className="muted">Abhi queue empty hai.</p>
           ) : (
             <div className="queue-list">
               {files.map((file, index) => (
-                <article key={index} className="queue-item">
+                <article key={`${file.name}-${index}`} className="queue-item">
                   <div>
                     <p>{index + 1}. {file.name}</p>
                     <small>{(file.size / (1024 * 1024)).toFixed(1)} MB</small>
@@ -307,7 +305,7 @@ function App() {
           )}
         </section>
 
-        <section className="status-panel glass-card">
+        <section className="status-panel panel">
           <h2>Pipeline Notes</h2>
           <ul>
             <li>1) Upload videos</li>
@@ -319,7 +317,7 @@ function App() {
         </section>
 
         {(progress || error) && (
-          <section className="feedback-panel glass-card">
+          <section className="feedback-panel panel">
             {progress && <div className="notice ok">{progress}</div>}
             {error && <div className="notice fail">{error}</div>}
           </section>
