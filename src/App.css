@@ -1,4 +1,5 @@
 .app-shell {
+<<<<<<< HEAD
   width: min(1240px, 100%);
   margin: 0 auto;
   display: grid;
@@ -14,6 +15,24 @@
 
 .hero-header {
   padding: 1rem 1.1rem;
+=======
+  width: min(1320px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.glass-card {
+  background: var(--surface-glass);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elevation);
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+}
+
+.hero-header {
+  padding: 1.2rem;
+>>>>>>> origin/main
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -22,6 +41,7 @@
 
 .meta {
   color: var(--text-dim);
+<<<<<<< HEAD
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -35,35 +55,73 @@ h1 {
 .headline {
   color: var(--text-soft);
   margin-top: 0.3rem;
+=======
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  color: var(--text-main);
+}
+
+.headline {
+  margin-top: 0.35rem;
+  color: var(--text-soft);
+>>>>>>> origin/main
 }
 
 .theme-btn {
   border: 1px solid var(--border-soft);
+<<<<<<< HEAD
   background: var(--surface-muted);
   color: var(--text-main);
   border-radius: 999px;
   padding: 0.5rem 0.85rem;
+=======
+  background: var(--surface-solid);
+  color: var(--text-main);
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+>>>>>>> origin/main
   cursor: pointer;
 }
 
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+<<<<<<< HEAD
   gap: 0.7rem;
 }
 
 .kpi {
   padding: 0.75rem;
+=======
+  gap: 0.8rem;
+}
+
+.kpi {
+  padding: 0.8rem;
+>>>>>>> origin/main
 }
 
 .kpi span {
   color: var(--text-dim);
+<<<<<<< HEAD
   font-size: 0.8rem;
+=======
+  font-size: 0.82rem;
+>>>>>>> origin/main
 }
 
 .kpi strong {
   display: block;
+<<<<<<< HEAD
   margin-top: 0.3rem;
+=======
+  margin-top: 0.4rem;
+>>>>>>> origin/main
   color: var(--text-main);
 }
 
@@ -74,6 +132,7 @@ h1 {
     'upload controls'
     'queue status'
     'feedback feedback';
+<<<<<<< HEAD
   gap: 0.7rem;
 }
 
@@ -115,18 +174,67 @@ h2 {
   background: var(--accent-soft);
 }
 
+=======
+  gap: 0.8rem;
+}
+
+.upload-panel,
+.controls-panel,
+.queue-panel,
+.status-panel,
+.feedback-panel {
+  padding: 1rem;
+}
+
+.upload-panel { grid-area: upload; }
+.controls-panel { grid-area: controls; }
+.queue-panel { grid-area: queue; }
+.status-panel { grid-area: status; }
+.feedback-panel { grid-area: feedback; display: grid; gap: 0.5rem; }
+
+.upload-panel input { display: none; }
+
+h2 {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  margin-bottom: 0.7rem;
+}
+
+.drop-zone {
+  min-height: 220px;
+  border-radius: 14px;
+  border: 2px dashed var(--accent);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 1rem;
+  background: linear-gradient(140deg, var(--accent-faint), transparent);
+}
+
+.drop-zone.active {
+  border-color: var(--accent-2);
+  transform: translateY(-2px);
+}
+
+>>>>>>> origin/main
 .secondary-btn,
 .primary-btn {
   border: none;
   border-radius: 10px;
+<<<<<<< HEAD
   padding: 0.62rem 0.95rem;
   color: #fff;
+=======
+  padding: 0.68rem 1rem;
+  color: white;
+>>>>>>> origin/main
   font-weight: 600;
   cursor: pointer;
 }
 
 .secondary-btn {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
+<<<<<<< HEAD
 }
 
 .primary-btn {
@@ -162,10 +270,48 @@ h2 {
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 0.45rem;
+=======
+}
+
+.primary-btn {
+  width: 100%;
+  margin-top: 0.8rem;
+  background: linear-gradient(125deg, var(--accent), var(--accent-2), var(--accent-3));
+}
+
+.controls-panel label,
+.drop-zone p,
+.drop-zone small,
+.live-progress p,
+.muted,
+.queue-item small,
+.status-panel li {
+  color: var(--text-soft);
+}
+
+.fps-slider { width: 100%; margin: 0.55rem 0 0.3rem; }
+.scale { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 0.74rem; }
+
+.live-progress {
+  margin-top: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--surface-solid);
+}
+
+.bar {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--progress-track);
+  margin-bottom: 0.5rem;
+>>>>>>> origin/main
 }
 
 .fill {
   height: 100%;
+<<<<<<< HEAD
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
 }
 
@@ -189,11 +335,38 @@ h2 {
 .queue-item p {
   color: var(--text-main);
   word-break: break-word;
+=======
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+>>>>>>> origin/main
 }
 
+.queue-list {
+  display: grid;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.queue-item {
+  border: 1px solid var(--border-soft);
+  background: var(--surface-solid);
+  border-radius: 10px;
+  padding: 0.55rem 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.queue-item p { color: var(--text-main); word-break: break-word; }
+
 .remove-btn {
+<<<<<<< HEAD
   width: 24px;
   height: 24px;
+=======
+  width: 25px;
+  height: 25px;
+>>>>>>> origin/main
   border: none;
   border-radius: 50%;
   background: #ef4444;
@@ -203,6 +376,7 @@ h2 {
 }
 
 .status-panel ul {
+<<<<<<< HEAD
   padding-left: 1rem;
   display: grid;
   gap: 0.4rem;
@@ -213,10 +387,23 @@ h2 {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+=======
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.tags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+>>>>>>> origin/main
 }
 
 .tags span {
   border: 1px solid var(--border-soft);
+<<<<<<< HEAD
   border-radius: 999px;
   padding: 0.25rem 0.58rem;
   font-size: 0.75rem;
@@ -233,6 +420,24 @@ h2 {
 
 .notice.ok { border-left: 4px solid #3b82f6; color: var(--text-main); }
 .notice.fail { border-left: 4px solid #ef4444; color: var(--text-main); }
+=======
+  background: var(--surface-solid);
+  color: var(--text-soft);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.78rem;
+}
+
+.notice {
+  border-radius: 10px;
+  padding: 0.72rem;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-solid);
+}
+
+.notice.ok { border-left: 5px solid #3b82f6; color: var(--text-main); }
+.notice.fail { border-left: 5px solid #ef4444; color: var(--text-main); }
+>>>>>>> origin/main
 
 .primary-btn:disabled,
 .secondary-btn:disabled {
@@ -251,5 +456,9 @@ h2 {
 @media (max-width: 640px) {
   .hero-header { flex-direction: column; }
   .kpi-grid { grid-template-columns: 1fr; }
+<<<<<<< HEAD
   .drop-zone { min-height: 140px; }
+=======
+  .drop-zone { min-height: 165px; }
+>>>>>>> origin/main
 }
