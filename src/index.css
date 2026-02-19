@@ -4,22 +4,42 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg-main: #f4f6ff;
+  --surface-elevated: rgba(255, 255, 255, 0.9);
+  --surface-muted: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: #dbe2f0;
+  --brand: #6366f1;
+  --brand-strong: #8b5cf6;
+  --shadow-soft: 0 20px 55px rgba(99, 102, 241, 0.14);
+}
+
+:root[data-theme='dark'] {
+  --bg-main: #0b1020;
+  --surface-elevated: rgba(15, 23, 42, 0.92);
+  --surface-muted: #111a30;
+  --text-primary: #e5e7eb;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #24304a;
+  --brand: #7c83ff;
+  --brand-strong: #a78bfa;
+  --shadow-soft: 0 25px 50px rgba(5, 8, 20, 0.6);
+}
+
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: Inter, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+  background: radial-gradient(circle at top, color-mix(in oklab, var(--brand) 25%, var(--bg-main)), var(--bg-main));
+  color: var(--text-primary);
+  padding: 1rem;
 }
 
 #root {
-  width: 100%;
-  max-width: 700px;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 20px;
+  min-height: calc(100vh - 2rem);
+  display: grid;
+  place-items: center;
 }
