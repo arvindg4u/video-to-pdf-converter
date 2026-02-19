@@ -214,8 +214,8 @@ function App() {
       <header className="hero-header panel">
         <div>
           <p className="meta">Performance-optimized converter</p>
-          <h1>🎥 MotionFrames PDF Lab</h1>
-          <p className="headline">Lag kam, rendering smooth, aur naya fast theme system ⚡</p>
+          <h1>🎥 PDF Lab</h1>
+          <p className="headline">Convert videos to PDF with ease</p>
         </div>
         <button type="button" className="theme-btn" onClick={toggleTheme}>
           {theme === 'light' ? 'Switch Dark' : 'Switch Light'}
