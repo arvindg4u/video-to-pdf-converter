@@ -73,15 +73,13 @@ h1 {
   grid-template-columns: 1.1fr 0.9fr;
   grid-template-areas:
     'upload controls'
-    'queue status'
-    'feedback feedback';
+    'queue feedback';
   gap: 0.8rem;
 }
 
 .upload-panel,
 .controls-panel,
 .queue-panel,
-.status-panel,
 .feedback-panel {
   padding: 1rem;
 }
@@ -89,7 +87,6 @@ h1 {
 .upload-panel { grid-area: upload; }
 .controls-panel { grid-area: controls; }
 .queue-panel { grid-area: queue; }
-.status-panel { grid-area: status; }
 .feedback-panel { grid-area: feedback; display: grid; gap: 0.45rem; }
 
 h2 {
@@ -141,8 +138,7 @@ h2 {
 .drop-zone small,
 .live-progress p,
 .muted,
-.queue-item small,
-.status-panel li {
+.queue-item small {
   color: var(--text-soft);
 }
 
@@ -203,28 +199,6 @@ h2 {
   flex-shrink: 0;
 }
 
-.status-panel ul {
-  padding-left: 1rem;
-  display: grid;
-  gap: 0.4rem;
-}
-
-.tags {
-  margin-top: 0.65rem;
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.tags span {
-  border: 1px solid var(--border-soft);
-  border-radius: 999px;
-  padding: 0.25rem 0.58rem;
-  font-size: 0.75rem;
-  background: var(--surface-muted);
-  color: var(--text-soft);
-}
-
 .notice {
   border: 1px solid var(--border-soft);
   border-radius: 9px;
@@ -245,7 +219,7 @@ h2 {
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .layout-grid {
     grid-template-columns: 1fr;
-    grid-template-areas: 'upload' 'controls' 'queue' 'status' 'feedback';
+    grid-template-areas: 'upload' 'controls' 'queue' 'feedback';
   }
 }
 

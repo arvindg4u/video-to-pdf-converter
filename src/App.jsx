@@ -305,17 +305,6 @@ function App() {
           )}
         </section>
 
-        <section className="status-panel panel">
-          <h2>Pipeline Notes</h2>
-          <ul>
-            <li>1) Upload videos</li>
-            <li>2) Set FPS</li>
-            <li>3) Start converter</li>
-            <li>4) PDF auto-download</li>
-          </ul>
-          <div className="tags"><span>Private</span><span>No backend</span><span>Adaptive UI</span></div>
-        </section>
-
         {(progress || error) && (
           <section className="feedback-panel panel">
             {progress && <div className="notice ok">{progress}</div>}
