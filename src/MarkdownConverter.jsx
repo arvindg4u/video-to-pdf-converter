@@ -2,9 +2,10 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
 import studyStyles from './markdown/study.css?inline'
 import sampleNotes from '../examples/academic-study-notes.md?raw'
-import { createNotesDocument, renderMarkdown } from './markdown/render'
+import { createNotesDocument, renderStudyMarkdown } from './markdown/render'
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
 import { prepareMarkdown } from './markdown/obsidian'
+import { bindPreviewNavigation } from './markdown/navigation'
 import { ingestAssets } from './markdown/assets'
 import './MarkdownConverter.css'
 const documentStyles = `${katexStyles}\n${studyStyles}`
@@ -33,15 +34,15 @@ export default function MarkdownConverter({ onBusyChange }) {
 
   const rendered = useMemo(() => {
     try {
-      return { html: renderMarkdown(deferredSource, { assets }), error: '' }
+      return { ...renderStudyMarkdown(deferredSource, { assets }), error: '' }
     } catch {
       return { html: '', error: 'These notes could not be rendered. Check the Markdown and try again.' }
     }
   }, [deferredSource, assets])
 
   const documentHtml = useMemo(() => createNotesDocument({
-    html: rendered.html, title, paper, styles: documentStyles,
-  }), [rendered.html, title, paper])
+    ...rendered, title, fileName, paper, styles: documentStyles,
+  }), [rendered, title, fileName, paper])
 
   const busy = reading || exporting
   const previewReady = loadedDocument === documentHtml && source === deferredSource
@@ -58,16 +59,18 @@ export default function MarkdownConverter({ onBusyChange }) {
     // images, which may stall forever before the export timeout can even run.
     frame.srcdoc = documentHtml
     let timer
+    let unbindNavigation
     function checkDocument() {
       const doc = frame.contentDocument
       if (doc && doc !== previousDocument && doc.readyState !== 'loading') {
+        unbindNavigation = bindPreviewNavigation(doc)
         setLoadedDocument(documentHtml)
       } else {
         timer = setTimeout(checkDocument, 50)
       }
     }
     checkDocument()
-    return () => clearTimeout(timer)
+    return () => { clearTimeout(timer); unbindNavigation?.() }
   }, [documentHtml])
 
   async function loadFile(files) {
@@ -221,7 +224,7 @@ export default function MarkdownConverter({ onBusyChange }) {
             <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error)}>
               {exporting ? 'Preparing PDF…' : 'Export PDF'}
             </button>
-            <p className="md-help">Opens your browser’s print dialog. Choose <strong>Save as PDF</strong>, keep the selected paper size, and turn off browser headers/footers for a clean result.</p>
+            <p className="md-help">Four or more H1–H3 headings add a linked Contents list. Frontmatter title takes precedence over the title field. Opens your browser’s print dialog. Choose <strong>Save as PDF</strong>, keep the selected paper size, and turn off browser headers/footers for a clean result. Chrome/Edge 131+ support our page numbers and a fixed document header when there is a single H1; other engines may omit them. Dynamic chapter headers are not supported; PDF title metadata depends on your browser.</p>
           </section>
         </div>
 

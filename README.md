@@ -138,6 +138,24 @@ Selection replaces the current image context; selecting a new note/sample clears
 
 A complete example is available at [`examples/academic-study-notes.md`](examples/academic-study-notes.md).
 
+### Long-document navigation (Phase 4)
+
+Documents with **at least four nonempty H1–H3 headings** automatically receive a compact **Contents** navigation after the title/optional subject and before the notes. Entries retain document order and existing numbering. Nested, unnumbered lists follow heading levels; a skipped level attaches to the nearest shallower heading without inventing a chapter. H4–H6, generated footnotes, and headings inside closed disclosure blocks are excluded. Short notes do not get a TOC.
+
+Navigation uses the **actual sanitized heading IDs** already used by Markdown/Obsidian links, including duplicate-heading suffixes and Hindi text. Labels come from the rendered tree, not a separate Markdown parser; formatting becomes readable text, and KaTeX's accessible/visual representations are not duplicated. Native fragment links support keyboard navigation without scripts in the exported document. The app qualifies fragments as `about:srcdoc#…` in the live iframe to prevent its inherited base URL from navigating back to the parent app. A parent-side enhancement focuses and scrolls the destination; it does not enable scripts in imported notes or loosen CSP.
+
+**Title and metadata:** a nonempty string frontmatter `title` takes precedence, followed by the existing title field, the Markdown filename, then “Study notes.” This also applies when editing/pasting frontmatter. A string `subject` is displayed below the title; all other YAML stays out of the print document. Metadata is escaped/inert. The iframe document's HTML `<title>` is set for printing. The browser/PDF driver controls PDF title metadata and the suggested filename; the app does not guarantee or post-process either.
+
+**Print structure:** later top-level H1 headings start new pages after intervening content. The first H1, consecutive heading-only sections, H2/H3, and headings inside callouts do not force chapter breaks. Existing keep-with-content, widows/orphans, image/callout avoidance, and repeating table headers remain. Oversized elements can still split when the browser must fit them. The TOC can span pages rather than forcing an entire chapter subtree into an unbreakable box. There are no estimated TOC page numbers.
+
+**Page numbers and running context:** CSS page-margin boxes provide a centered, subtle `counter(page)` on A4 and Letter in **Chrome/Edge 131+**. Use default/document margins and disable the browser's own headers/footers to avoid duplicate furniture. Unsupported engines may omit these margin boxes; use their native print headers/footers if page numbering is essential. There is no JavaScript pagination or fixed-position counter fallback. A document with exactly one eligible H1 repeats its text (bounded to 80 characters) as a fixed document-level header. Multiple H1 chapters get **no running header**: dynamic per-page chapter strings are not reliably supported by the current browser-print pipeline, and repeating the first chapter over unrelated chapters would be misleading. We deliberately omit total-page counts and custom PDF metadata.
+
+Support references: [Chrome's page-margin documentation](https://developer.chrome.com/blog/print-margins) describes native margin boxes/counters from version 131 and the limitations of generated running strings; [MDN iframe documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe) explains `srcdoc` base URLs. These are capability references, not a claim that PDF output was visually verified in this sandbox. Link preservation in PDFs depends on the browser engine/viewer.
+
+**Performance and verification:** `renderStudyMarkdown()` returns content, headings, TOC, and frontmatter from one Markdown pipeline. Changing title/paper does not reparse notes. A deterministic 123,571-character fixture (`tests/fixtures/long-study-notes.js`) exercises 300 headings plus 60 each of tables, callouts, images, and math expressions. The Node test reports elapsed rendering time with a generous regression guard; actual interactive performance and pagination still need browser validation. Playwright covers iframe/standalone navigation, keyboard focus, duplicate/Hindi targets, metadata, print requests, and multipage A4/Letter PDFs. Chromium is unavailable in this sandbox, so those assertions are **not verified here**.
+
+Phase 4 intentionally defers dynamic chapter headers, TOC page-number cross-references, a PDF-outline/bookmarks manager, search, typography controls, Study/Revision modes, PDF-engine replacement, and all other previously excluded features.
+
 ### Tests
 
 ```bash

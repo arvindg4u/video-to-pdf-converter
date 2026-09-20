@@ -176,3 +176,26 @@ summary { font-weight: 700; color: var(--heading); }
   color: #59616b;
   font-size: 0.92em;
 }
+
+/* Long-document navigation, subordinate to the existing study typography. */
+.notes-frontmatter { margin-bottom: 16px; }
+.notes-document-title { font-weight: 700; color: var(--heading); }
+.notes-subject { font: 9pt/1.5 var(--font-meta); color: var(--ink-muted); }
+.notes-toc { margin: 0 0 22px; padding: 0 0 14px; border-bottom: 1px solid var(--rule); font-size: 10.5pt; line-height: 1.45; }
+.notes-toc-title { font-weight: 700; margin-bottom: 6px; break-after: avoid; }
+.notes-toc ul { list-style: none; margin: 0; padding-left: 1.2em; }
+.notes-toc > ul { padding-left: 0; }
+.notes-toc li { margin: 2px 0; }
+.notes-toc a { color: inherit; }
+.notes-toc a:focus-visible, main :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+main h1, main h2, main h3 { scroll-margin-top: 12px; }
+@media print {
+  main > h1.notes-chapter { break-before: page; page-break-before: always; }
+  /* A large TOC may span pages; don't keep whole chapter subtrees together. */
+  .notes-toc, .notes-toc li, .notes-toc ul { break-inside: auto; }
+  .notes-toc a { break-inside: avoid; }
+  .notes-frontmatter { break-inside: avoid; }
+}
+@media print {
+  .notes-toc a:focus-visible, main :focus-visible { outline: none; }
+}
