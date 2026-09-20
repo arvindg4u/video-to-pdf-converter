@@ -69,14 +69,3 @@ export function computeFrameTimestamps(duration, fps, fileName = 'video') {
   }
   return timestamps
 }
-
-/**
- * Planned frame counts for a queue of videos. Each entry keeps the file's
- * identity so errors and progress can name the exact video.
- */
-export function planQueueFrames(durations, fps) {
-  return durations.map(({ fileName, duration }) => ({
-    fileName,
-    frameCount: countFrames(duration, fps, fileName),
-  }))
-}

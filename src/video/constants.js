@@ -49,8 +49,5 @@ export const MAX_FPS = 6
 export const JPEG_QUALITY = 0.85
 export const JPEG_MIME_TYPE = 'image/jpeg'
 
-/** Smallest playable duration we attempt to sample (anything above 0 works). */
-export const MIN_PLAYABLE_DURATION_SECONDS = 0
-
 /** Page margin (mm) around a fitted video frame. */
 export const PDF_PAGE_MARGIN_MM = 10

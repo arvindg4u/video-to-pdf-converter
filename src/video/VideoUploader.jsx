@@ -45,7 +45,7 @@ export default function VideoUploader({ disabled, onFiles }) {
         disabled={disabled}
         aria-label="Choose MP4 video files"
       />
-      <div className={`drop-zone ${dragActive ? 'active' : ''}`} aria-hidden={dragActive ? undefined : false}>
+      <div className={`drop-zone ${dragActive ? 'active' : ''}`}>
         <p>{dragActive ? 'Drop now 🔥' : 'Drag & Drop .mp4 videos'}</p>
         <button
           type="button"

@@ -57,8 +57,15 @@ export function loadVideoMetadata(
 ) {
   throwIfAborted(signal)
 
-  const video = createVideoElement()
-  const objectUrl = createObjectURL(file)
+  let video
+  let objectUrl
+  try {
+    video = createVideoElement()
+    objectUrl = createObjectURL(file)
+  } catch (error) {
+    // Element/URL setup itself failed (never a hang): report as unreadable.
+    return Promise.reject(metadataFailedError(file?.name || 'video', error))
+  }
   let settled = false
 
   const dispose = () => {

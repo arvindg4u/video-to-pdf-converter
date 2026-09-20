@@ -203,22 +203,19 @@ export async function convertVideosToPdf(
             await seek(handle.element, timestamp, { signal, fileName: file.name })
             throwIfAborted(signal)
             ctx.drawImage(handle.element, 0, 0, canvas.width, canvas.height)
+            // frameData is block-scoped per iteration: after embedding, the
+            // (large) data-URL string is unreachable and collectable while
+            // the bytes live only inside the PDF document. Nothing accumulates.
             const frameData = canvas.toDataURL(JPEG_MIME_TYPE, JPEG_QUALITY)
-            try {
-              addFrame(pdf, {
-                imageDataUrl: frameData,
-                imageFormat: 'JPEG',
-                srcWidth: canvas.width,
-                srcHeight: canvas.height,
-                paper,
-                includeLabel: includeLabels,
-                label: `${file.name} · ${timestamp.toFixed(2)}s`,
-              })
-            } finally {
-              // Release the (large) data-URL string immediately; the bytes
-              // now live only inside the PDF document.
-              void frameData
-            }
+            addFrame(pdf, {
+              imageDataUrl: frameData,
+              imageFormat: 'JPEG',
+              srcWidth: canvas.width,
+              srcHeight: canvas.height,
+              paper,
+              includeLabel: includeLabels,
+              label: `${file.name} · ${timestamp.toFixed(2)}s`,
+            })
           } catch (error) {
             if (error instanceof VideoError) throw error
             throw toVideoError(error, file.name)

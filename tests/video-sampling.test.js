@@ -4,7 +4,6 @@ import {
   clampFps,
   computeFrameTimestamps,
   countFrames,
-  planQueueFrames,
 } from '../src/video/videoSampling.js'
 import { VIDEO_ERROR_CODES } from '../src/video/errors.js'
 
@@ -77,14 +76,12 @@ test('zero, negative, NaN, and infinite durations are rejected', () => {
 })
 
 test('queue planning sums per-video counts with no off-by-one', () => {
-  const plan = planQueueFrames(
-    [
-      { fileName: 'a.mp4', duration: 10 },
-      { fileName: 'b.mp4', duration: 2.5 },
-      { fileName: 'c.mp4', duration: 0.4 },
-    ],
-    2,
-  )
-  assert.deepEqual(plan.map((p) => p.frameCount), [20, 5, 1])
-  assert.equal(plan.reduce((sum, p) => sum + p.frameCount, 0), 26)
+  const videos = [
+    { fileName: 'a.mp4', duration: 10 },
+    { fileName: 'b.mp4', duration: 2.5 },
+    { fileName: 'c.mp4', duration: 0.4 },
+  ]
+  const counts = videos.map((video) => countFrames(video.duration, 2, video.fileName))
+  assert.deepEqual(counts, [20, 5, 1])
+  assert.equal(counts.reduce((sum, count) => sum + count, 0), 26)
 })
