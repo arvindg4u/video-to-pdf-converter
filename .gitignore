@@ -4,3 +4,5 @@ server/uploads/
 server/frames/
 *.log
 .DS_Store
+playwright-report/
+test-results/
