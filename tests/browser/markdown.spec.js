@@ -23,6 +23,10 @@ test('uploads Markdown, renders all study elements, and retains edits across mod
   await expect(preview.locator('.hljs-keyword')).not.toHaveCount(0)
   await expect(preview.locator('input[type="checkbox"]')).toHaveCount(4)
   await expect(preview.locator('section[data-footnotes]')).toHaveCount(1)
+  // Phase 2: the sample demonstrates Obsidian callouts in the study theme.
+  await expect(preview.locator('.callout')).toHaveCount(2)
+  await expect(preview.locator('.callout-tip .callout-title')).toContainText('Key takeaway')
+  await expect(preview.locator('.callout-warning .callout-title')).toContainText('Common exam trap')
   await expect(page.getByLabel('Document title')).toHaveValue('academic-study-notes')
   await page.getByLabel('Edit Markdown').fill('# Edited notes\n\n**Important**')
   await expect(preview.getByRole('heading', { name: 'Edited notes' })).toBeVisible()
@@ -101,6 +105,86 @@ test('imports an Obsidian notes file: frontmatter set aside, syntax preserved, H
   expect(await frame.evaluate(() => document.title)).toBe('Indian Polity')
 })
 
+test('renders the exam study theme: typography, callouts, tables, math, images, print', async ({ page }) => {
+  await openMarkdown(page)
+  const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9AAAAABJRU5ErkJggg=='
+  const notes = [
+    '---',
+    'title: Polity Complete Notes',
+    'subject: RAS',
+    '---',
+    '',
+    '# भारतीय संविधान — Indian Polity',
+    '',
+    'अनुच्छेद 12–35 — **मौलिक अधिकार** (Fundamental Rights) with mixed script and $E = mc^2$.',
+    '',
+    '> [!NOTE] संक्षेप में',
+    '> - Point one — हिंदी',
+    '> - Point two — English',
+    '',
+    '> [!WARNING]- Collapsible trap',
+    '> Hidden detail line.',
+    '',
+    '## Topics',
+    '',
+    '| अनुच्छेद | Right |',
+    '| - | - |',
+    '| 14 | Equality |',
+    '',
+    '```python',
+    'def recall(): pass',
+    '```',
+    '',
+    '$$',
+    '\\frac{a}{b}',
+    '$$',
+    '',
+    `![Pixel](${pixel})`,
+  ].join('\n')
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.md', mimeType: '', buffer: Buffer.from(notes, 'utf8') })
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByLabel('Document title')).toHaveValue('Polity Complete Notes')
+  const frame = page.frames().find((candidate) => candidate.parentFrame())
+
+  // Typography: Devanagari-capable local stack, ~11.5pt body, relaxed leading, white paper.
+  const typography = await frame.locator('body').evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return { family: styles.fontFamily, size: parseFloat(styles.fontSize), lineHeight: parseFloat(styles.lineHeight) }
+  })
+  expect(typography.family).toContain('Noto Serif Devanagari')
+  expect(Math.abs(typography.size - (11.5 * 96) / 72)).toBeLessThan(0.5)
+  expect(typography.lineHeight / typography.size).toBeGreaterThan(1.5)
+  expect(await frame.locator('.study-notes').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)')
+
+  // Hindi + English mixed content renders.
+  await expect(frame.getByRole('heading', { name: 'भारतीय संविधान — Indian Polity' })).toBeVisible()
+  await expect(frame.locator('main')).toContainText('अनुच्छेद 12–35')
+
+  // Callouts: styled variant with nested list, and a collapsible one closed in preview.
+  await expect(frame.locator('.callout-note .callout-title')).toContainText('संक्षेप में')
+  await expect(frame.locator('.callout-note li')).toHaveCount(2)
+  const collapsed = frame.locator('details.callout-warning')
+  await expect(collapsed.locator('summary')).toContainText('Collapsible trap')
+  expect(await collapsed.evaluate((element) => element.open)).toBe(false)
+
+  // Tables, code highlighting, display math, and an unstretched image.
+  await expect(frame.locator('table th').first()).toHaveText('अनुच्छेद')
+  await expect(frame.locator('.hljs-keyword')).not.toHaveCount(0)
+  await expect(frame.locator('.katex-display')).toHaveCount(1)
+  const imageBox = await frame.locator('img').first().boundingBox()
+  expect(imageBox.width).toBeGreaterThan(0)
+  expect(Math.abs(imageBox.width - imageBox.height)).toBeLessThan(1)
+
+  // The print flow still works: collapsible callouts open, margins apply.
+  await frame.evaluate(() => { window.print = () => { window.printRequested = true } })
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await frame.evaluate(() => window.printRequested)).toBe(true)
+  expect(await frame.evaluate(() => document.querySelector('details.callout-warning').open)).toBe(true)
+  expect(await frame.evaluate(() => document.querySelector('style').textContent)).toContain('16mm 16mm 18mm')
+})
+
 test('accepts drag and drop and clears export eligibility when editor is empty', async ({ page }) => {
   await openMarkdown(page)
   const data = await page.evaluateHandle(() => {
@@ -142,7 +226,7 @@ test('requests printing of only the notes after fonts load, with the chosen pape
 
 test('produces a multipage PDF from a long rendered document without horizontal overflow', async ({ page }, testInfo) => {
   await sample(page)
-  await page.getByLabel('Edit Markdown').fill('# Long study notes\n\n' + Array.from({ length: 20 }, (_, i) => `## Topic ${i + 1}\n\nA useful explanation with **key terms** and an equation $E = mc^2$.\n\n- Recall the concept\n- Apply it to an example\n\n`).join(''))
+  await page.getByLabel('Edit Markdown').fill('# Long study notes — दीर्घ अध्ययन सामग्री\n\n' + Array.from({ length: 20 }, (_, i) => `## Topic ${i + 1}\n\nA useful explanation with **key terms** and an equation $E = mc^2$.\n\n- Recall the concept\n- Apply it to an example\n\n> [!NOTE] Revision point ${i + 1}\n> याद रखें — remember this before the exam.\n\n`).join(''))
   await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
   const html = await page.locator('iframe').getAttribute('srcdoc')
   await page.setContent(html)

@@ -1,12 +1,12 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
-import academicStyles from './markdown/academic.css?inline'
+import studyStyles from './markdown/study.css?inline'
 import sampleNotes from '../examples/academic-study-notes.md?raw'
 import { createNotesDocument, renderMarkdown } from './markdown/render'
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
 import { prepareMarkdown } from './markdown/obsidian'
 import './MarkdownConverter.css'
-const documentStyles = `${katexStyles}\n${academicStyles}`
+const documentStyles = `${katexStyles}\n${studyStyles}`
 
 export default function MarkdownConverter({ onBusyChange }) {
   const [source, setSource] = useState('')
@@ -149,7 +149,7 @@ export default function MarkdownConverter({ onBusyChange }) {
           <h2>Turn Markdown into study-ready notes</h2>
           <p className="muted">Beautifully typeset notes, equations, and code. All conversion stays in your browser.</p>
         </div>
-        <span className="academic-badge">Academic study notes</span>
+        <span className="academic-badge">Exam study notes</span>
       </div>
 
       <div className="markdown-layout">
@@ -188,7 +188,7 @@ export default function MarkdownConverter({ onBusyChange }) {
             <select id="notes-paper" value={paper} disabled={busy} onChange={(event) => setPaper(event.target.value)}>
               <option value="A4">A4</option><option value="Letter">US Letter</option>
             </select>
-            <p className="md-help">Academic theme: serif body text, navy headings, highlighted code, and warm callouts. The PDF always uses a light, print-friendly page.</p>
+            <p className="md-help">Exam study theme: book-like serif typography tuned for long revision sessions and Hindi + English mixed notes, clear heading hierarchy, calm callouts, and print-safe tables. The PDF always uses a light page optimized for A4 (Letter also supported).</p>
             <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error)}>
               {exporting ? 'Preparing PDF…' : 'Export PDF'}
             </button>
@@ -210,7 +210,7 @@ export default function MarkdownConverter({ onBusyChange }) {
             placeholder={'# Your study notes\n\nPaste Markdown here, upload a .md file, or try the sample.\n\n## Key concepts\n- **Important idea**\n- [ ] Review before the exam\n\n> A useful takeaway\n\nInline math: $E = mc^2$'}
             onChange={(event) => { setSource(event.target.value); setStatus(''); setError('') }} />
           <p className="md-help">Supports headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML, and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
-          <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian-only syntax such as <code>[[Wikilinks]]</code>, <code>![[embeds]]</code>, <code>#tags</code>, and <code>^block-ids</code> currently appears as the literal text you wrote — it is never silently dropped or altered.</p>
+          <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian callouts (<code>&gt; [!NOTE]</code>, <code>&gt; [!IMPORTANT]</code>, <code>&gt; [!TIP]</code>, <code>&gt; [!WARNING]</code>, <code>&gt; [!CAUTION]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases like <code>[!INFO]</code>) render as calm study blocks; unknown types degrade gracefully. Remaining Obsidian-only syntax such as <code>[[Wikilinks]]</code>, <code>![[embeds]]</code>, <code>#tags</code>, and <code>^block-ids</code> currently appears as the literal text you wrote — it is never silently dropped or altered.</p>
           <p className="md-help">Images need absolute HTTP(S) URLs or embedded PNG/JPEG/GIF/WebP data. A chosen .md file does not grant access to the rest of your Obsidian vault, so local attachments (<code>![[image.png]]</code>, relative paths) stay unavailable; vault/folder import is planned for a later phase. Remote images are fetched from their hosts; scripts and unsafe HTML are removed. Diagram plugins such as Mermaid are not rendered.</p>
         </section>
       </div>
@@ -221,7 +221,7 @@ export default function MarkdownConverter({ onBusyChange }) {
       <section className="panel markdown-panel md-preview-panel">
         <div className="md-section-heading">
           <h3>Document preview</h3>
-          <span className="muted">{paper} · Academic · {previewReady ? 'Up to date' : 'Updating…'}</span>
+          <span className="muted">{paper} · Study theme · {previewReady ? 'Up to date' : 'Updating…'}</span>
         </div>
         {!source.trim() && <p className="md-empty">Your rendered study notes will appear here. Add a file, paste Markdown, or try the sample to begin.</p>}
         <iframe ref={previewRef} title="Study notes preview" className={`md-preview ${!source.trim() ? 'md-preview-empty' : ''}`}

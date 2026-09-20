@@ -10,6 +10,7 @@ import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
 import { splitFrontmatter } from './obsidian.js'
+import { CALLOUT_CLASS_PATTERN, remarkCallouts } from './callouts.js'
 
 // Sanitize untrusted HTML BEFORE KaTeX/highlighting add their trusted markup.
 const schema = {
@@ -17,6 +18,13 @@ const schema = {
   attributes: {
     ...defaultSchema.attributes,
     code: [['className', /^language-./, 'math-inline', 'math-display']],
+    // Callout structure built by remarkCallouts: fixed, allowlisted class
+    // names only — user-written callout types never reach markup. `open` is
+    // needed for expanded collapsible callouts (<details>).
+    div: [['className', CALLOUT_CLASS_PATTERN]],
+    details: [['className', CALLOUT_CLASS_PATTERN], 'open'],
+    summary: [['className', CALLOUT_CLASS_PATTERN]],
+    p: [['className', CALLOUT_CLASS_PATTERN]],
   },
   protocols: {
     ...defaultSchema.protocols,
@@ -67,6 +75,7 @@ const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkMath)
+  .use(remarkCallouts)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   .use(rehypeSlug)
@@ -96,10 +105,10 @@ export function createNotesDocument({ html, title, paper = 'A4', styles }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src https: http: data:; base-uri 'none'; form-action 'none'">
 <title>${escapeHtml(title || 'Study notes')}</title>
-<style>${styles}\n@page { size: ${pageSize}; margin: 18mm 17mm 20mm; }</style>
+<style>${styles}\n@page { size: ${pageSize}; margin: 16mm 16mm 18mm; }</style>
 </head><body><article class="study-notes">
-<header class="notes-header"><span>Academic study notes</span><span>${escapeHtml(title)}</span></header>
+<header class="notes-header"><span>Exam study notes</span><span>${escapeHtml(title)}</span></header>
 <main>${html}</main>
-<footer class="notes-footer">Study notes · PDF Lab</footer>
+<footer class="notes-footer">Exam study notes · PDF Lab</footer>
 </article></body></html>`
 }
