@@ -71,6 +71,7 @@ for (const width of [600, 720, 840, 960, 1280]) {
         expect(await page.evaluate(() => window.__profilePrinted)).toBe(`${mode.toLowerCase()}-mode`)
       }
       // Native radio arrow-key behavior; selected state isn't color alone.
+      await expect(page.getByRole('radio', { name: 'Revision', exact: true })).toBeEnabled()
       await page.getByRole('radio', { name: 'Revision', exact: true }).focus()
       await page.keyboard.press('ArrowLeft')
       await expect(page.getByRole('radio', { name: 'Study', exact: true })).toBeChecked()
@@ -88,7 +89,7 @@ test('both profiles retain standard A4/Letter print sizes independent of narrow 
   const preview = await openNotes(page)
   for (const mode of ['Study', 'Revision']) for (const paper of ['A4', 'Letter']) {
     await page.getByRole('radio', { name: mode, exact: true }).check()
-    await page.getByLabel('Paper size').selectOption(paper)
+    await page.locator('#notes-paper').selectOption(paper)
     await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
     await expect(preview.locator('body')).toHaveClass(`${mode.toLowerCase()}-mode`)
     const html = await page.locator('iframe').getAttribute('srcdoc')

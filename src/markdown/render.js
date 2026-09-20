@@ -134,7 +134,7 @@ export function createNotesDocument({ html, title, fileName, metadata, tocHtml =
 <style>${styles}
 @page {
   @bottom-center { content: counter(page); font: 8pt var(--font-meta, sans-serif); color: #5b6874; }
-  @top-center { content: "${cssContext}"; font: 8pt var(--font-body, serif); color: #5b6874; }
+  @top-center { content: "${cssContext}"; font: 8pt var(--font-body, serif); color: #5b6874; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 @page { size: ${pageSize}; margin: 16mm 16mm 18mm; }</style>
 </head><body class="${modeClass}"><article class="study-notes">

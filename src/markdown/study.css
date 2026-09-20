@@ -198,3 +198,24 @@ main h1, main h2, main h3 { scroll-margin-top: 12px; }
 @media print {
   .notes-toc a:focus-visible, main :focus-visible { outline: none; }
 }
+
+/* Print hardening: both standard pages use 16/16/18 mm margins. Images fit
+ * below the shorter Letter content height (245.4 mm), with caption allowance.
+ * Fragmentation avoidance is a preference; oversized blocks must still split.
+ */
+@media print {
+  .study-notes, main { min-width: 0; overflow-wrap: anywhere; }
+  .notes-header { flex-wrap: wrap; }
+  .notes-header span { min-width: 0; overflow-wrap: anywhere; }
+  img { max-width: 100%; max-height: 210mm; }
+  table { table-layout: fixed; }
+  th, td { min-width: 0; overflow-wrap: anywhere; }
+  pre { break-inside: avoid; page-break-inside: avoid; overflow: visible; }
+  pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* KaTeX can wrap between top-level relation/operator groups. Intrinsically
+   * indivisible matrices/fractions remain a browser limitation, not silently
+   * scaled to illegibility or hidden behind a print scrollport. */
+  .katex-display > .katex { white-space: normal; max-width: 100%; }
+  .katex-display .katex-html { white-space: normal; }
+  .notes-toc a { display: inline; padding: 0; min-height: 0; }
+}

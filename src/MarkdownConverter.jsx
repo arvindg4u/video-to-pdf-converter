@@ -1,6 +1,7 @@
+import { printNotes } from './markdown/printExport'
 import MarkdownPreflight from './MarkdownPreflight'
 import { analyzePreflight } from './markdown/preflight'
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
 import studyStyles from './markdown/study.css?inline'
 import profileStyles from './markdown/profiles.css?inline'
@@ -28,6 +29,18 @@ export default function MarkdownConverter({ onBusyChange }) {
   const [loadedDocument, setLoadedDocument] = useState('')
   const inputRef = useRef(null)
   const previewRef = useRef(null)
+  const [intentVersion, commitIntent] = useState(0)
+  const intentRef = useRef(0)
+  const committedIntentRef = useRef(-1)
+  const exportRef = useRef(null)
+  const readyDocumentRef = useRef(null)
+  const previewSequence = useRef(0)
+  const mountedRef = useRef(true)
+  function markChanged() {
+    intentRef.current++
+    commitIntent(intentRef.current)
+    exportRef.current?.abort()
+  }
   const deferredSource = useDeferredValue(source)
 
   // Phase-1 Obsidian boundary: separate frontmatter metadata (preserved for
@@ -53,6 +66,16 @@ export default function MarkdownConverter({ onBusyChange }) {
     ...rendered, title, fileName, paper, mode, styles: documentStyles,
   }), [rendered, title, fileName, paper, mode])
 
+  const previewSnapshot = useMemo(() => {
+    const token = String(++previewSequence.current)
+    return { token, html: documentHtml.replace('<head>', `<head><meta name="pdf-lab-preview" content="${token}">`) }
+  }, [documentHtml])
+  useLayoutEffect(() => { committedIntentRef.current = intentVersion }, [intentVersion])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false; exportRef.current?.abort() }
+  }, [])
+
   const busy = reading || exporting
   const previewReady = loadedDocument === documentHtml && source === deferredSource
 
@@ -66,12 +89,14 @@ export default function MarkdownConverter({ onBusyChange }) {
     const previousDocument = frame.contentDocument
     // Wait for the new DOM, not iframe.onload: onload also waits for remote
     // images, which may stall forever before the export timeout can even run.
-    frame.srcdoc = documentHtml
+    frame.srcdoc = previewSnapshot.html
+    readyDocumentRef.current = null
     let timer
     let unbindNavigation
     function checkDocument() {
       const doc = frame.contentDocument
-      if (doc && doc !== previousDocument && doc.readyState !== 'loading') {
+      if (doc && doc !== previousDocument && doc.readyState !== 'loading' && doc.querySelector('meta[name="pdf-lab-preview"]')?.content === previewSnapshot.token) {
+        readyDocumentRef.current = doc
         unbindNavigation = bindPreviewNavigation(doc)
         setLoadedDocument(documentHtml)
       } else {
@@ -80,10 +105,11 @@ export default function MarkdownConverter({ onBusyChange }) {
     }
     checkDocument()
     return () => { clearTimeout(timer); unbindNavigation?.() }
-  }, [documentHtml])
+  }, [documentHtml, previewSnapshot])
 
   async function loadFile(files) {
     if (busy) return
+    markChanged()
     setError('')
     setStatus('')
     setReading(true)
@@ -109,6 +135,7 @@ export default function MarkdownConverter({ onBusyChange }) {
 
   async function loadAssets(files, folder = false) {
     if (busy || !files.length) return
+    markChanged()
     setReading(true)
     setError('')
     setStatus('')
@@ -123,46 +150,34 @@ export default function MarkdownConverter({ onBusyChange }) {
 
   async function exportPdf() {
     if (!previewReady || !source.trim() || rendered.error || preflight.errorCount || busy) return
+    if (exportRef.current) return
+    const version = committedIntentRef.current
+    if (version !== intentRef.current) { setError('The notes are updating. Wait for the current preview, then export again.'); return }
+    const controller = new AbortController()
+    exportRef.current = controller
     setExporting(true)
     setError('')
     setStatus('Preparing fonts and images…')
     const frame = previewRef.current
-    const doc = frame?.contentDocument
     try {
-      if (!doc || !frame.contentWindow) throw new Error('The preview is not ready. Please try again.')
-      // Open disclosure blocks so printable notes include their full contents.
-      doc.querySelectorAll('details').forEach((details) => { details.open = true })
-      // Flush layout so fonts in newly opened disclosure blocks start loading
-      // before observing FontFaceSet.ready.
-      doc.documentElement.getBoundingClientRect()
-      const resources = Promise.all([
-        doc.fonts.ready,
-        ...Array.from(doc.images, (image) => image.decode().catch(() => {})),
-      ])
-      let timer
-      try {
-        await Promise.race([
-          resources,
-          new Promise((_, reject) => {
-            timer = setTimeout(() => reject(new Error('Images or fonts are still loading. Check your connection or remove unavailable images, then try again.')), 15000)
-          }),
-        ])
-      } finally {
-        clearTimeout(timer)
-      }
-      const missingImages = Array.from(doc.images).filter((image) => !image.naturalWidth)
-      frame.contentWindow.focus()
-      frame.contentWindow.print()
-      setStatus(`${missingImages.length ? `${missingImages.length} image(s) could not load and will be missing. ` : ''}Print dialog requested. Choose “Save as PDF” to save your notes. You can export again at any time.`)
+      const result = await printNotes({
+        frame, expectedDocument: readyDocumentRef.current, signal: controller.signal,
+        isCurrent: () => intentRef.current === version && previewRef.current === frame && frame?.srcdoc === previewSnapshot.html,
+      })
+      if (mountedRef.current) setStatus(`${result.missingImages ? `${result.missingImages} image(s) could not load and will be missing. ` : ''}${result.fontFallback ? 'A font could not be confirmed; browser fallback fonts were used. ' : ''}Print dialog requested. Choose “Save as PDF” to save your notes. You can export again at any time.`)
     } catch (err) {
-      setError(err.message || 'Unable to open the print dialog. Try again in a browser that supports printing.')
-      setStatus('')
+      if (mountedRef.current) {
+        setError(err.message || 'Unable to open the print dialog. Try again in a browser that supports printing.')
+        setStatus('')
+      }
     } finally {
-      setExporting(false)
+      if (exportRef.current === controller) exportRef.current = null
+      if (mountedRef.current) setExporting(false)
     }
   }
 
   function useSample() {
+    markChanged()
     setAssets(null)
     setSource(sampleNotes)
     setTitle('Learning and memory')
@@ -214,7 +229,7 @@ export default function MarkdownConverter({ onBusyChange }) {
                 onChange={(event) => { loadAssets(Array.from(event.target.files || [])); event.target.value = '' }} />
             </label>
             <p className="md-help">{assets?.size || 0} local images · 200 files max · 10 MB/image · 40 MB total. Selecting a new note or sample clears images.</p>
-            {assets && <button type="button" className="md-text-button" disabled={busy} onClick={() => setAssets(null)}>Clear local images</button>}
+            {assets && <button type="button" className="md-text-button" disabled={busy} onClick={() => { markChanged(); setAssets(null) }}>Clear local images</button>}
             <div className="md-file-row">
               <span className="muted md-file-name">{fileName || 'Or paste your notes below.'}</span>
               <button type="button" className="md-text-button" disabled={busy} onClick={useSample}>Try a sample</button>
@@ -224,9 +239,9 @@ export default function MarkdownConverter({ onBusyChange }) {
           <section className="panel markdown-panel md-settings">
             <h3>2. Make it yours</h3>
             <label htmlFor="notes-title">Document title</label>
-            <input id="notes-title" value={title} maxLength={150} disabled={busy} onChange={(event) => setTitle(event.target.value)} />
+            <input id="notes-title" value={title} maxLength={150} disabled={busy} onChange={(event) => { markChanged(); setTitle(event.target.value) }} />
             <label htmlFor="notes-paper">Paper size</label>
-            <select id="notes-paper" value={paper} disabled={busy} onChange={(event) => setPaper(event.target.value)}>
+            <select id="notes-paper" value={paper} disabled={busy} onChange={(event) => { markChanged(); setPaper(event.target.value) }}>
               <option value="A4">A4</option><option value="Letter">US Letter</option>
             </select>
             <a className="md-preview-jump" href="#notes-preview">Jump to preview and output mode</a>
@@ -251,7 +266,7 @@ export default function MarkdownConverter({ onBusyChange }) {
           )}
           <textarea id="markdown-source" value={source} maxLength={MAX_FILE_SIZE} spellCheck={false} disabled={busy}
             placeholder={'# Your study notes\n\nPaste Markdown here, upload a .md file, or try the sample.\n\n## Key concepts\n- **Important idea**\n- [ ] Review before the exam\n\n> A useful takeaway\n\nInline math: $E = mc^2$'}
-            onChange={(event) => { setSource(event.target.value); setStatus(''); setError('') }} />
+            onChange={(event) => { markChanged(); setSource(event.target.value); setStatus(''); setError('') }} />
           <p className="md-help">Supports headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML, and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
           <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian callouts (<code>&gt; [!NOTE]</code>, <code>&gt; [!IMPORTANT]</code>, <code>&gt; [!TIP]</code>, <code>&gt; [!WARNING]</code>, <code>&gt; [!CAUTION]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases like <code>[!INFO]</code>) render as calm study blocks; unknown types degrade gracefully. Wikilinks display readable labels; current-document heading and paragraph block links resolve when present. Tags render as subtle metadata. Image embeds resolve only from explicitly supplied assets; unavailable embeds show a placeholder.</p>
           <p className="md-help">Local PNG/JPEG/GIF/WebP images require an explicit image selection; a .md file alone cannot access its vault. Relative Markdown images use exact paths within your selected asset root. Obsidian embeds may also use a unique filename. Ambiguous names are not guessed. Remote HTTP(S) images and raster data URLs remain supported; scripts and unsafe HTML are removed. Mermaid and embedded notes are not rendered.</p>
@@ -273,7 +288,7 @@ export default function MarkdownConverter({ onBusyChange }) {
               {['study', 'revision'].map((value) => (
                 <label key={value}>
                   <input type="radio" name="notes-mode" value={value} checked={mode === value}
-                    onChange={() => { setMode(value); setStatus('') }} />
+                    onChange={() => { markChanged(); setMode(value); setStatus('') }} />
                   <span>{value === 'study' ? 'Study' : 'Revision'}</span>
                 </label>
               ))}

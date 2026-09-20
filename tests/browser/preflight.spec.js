@@ -23,7 +23,7 @@ test('preflight automatically reports normal imported notes and follows edits an
   await page.getByRole('radio', { name: 'Revision', exact: true }).check()
   await expect(panel).toContainText('Revision / A4 content estimate, not pagination')
   expect(await panel.locator('.md-preflight-stats').innerText()).toBe(stats)
-  await page.getByLabel('Paper size').selectOption('Letter')
+  await page.locator('#notes-paper').selectOption('Letter')
   await expect(panel).toContainText('Revision / Letter')
   await page.getByLabel('Edit Markdown').fill('# Fresh\n\n## Topic\n\n### Detail\n\n#### More')
   await expect(panel).toContainText('4 headings')
