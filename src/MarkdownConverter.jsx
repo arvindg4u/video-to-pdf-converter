@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
 import studyStyles from './markdown/study.css?inline'
+import profileStyles from './markdown/profiles.css?inline'
 import sampleNotes from '../examples/academic-study-notes.md?raw'
 import { createNotesDocument, renderStudyMarkdown } from './markdown/render'
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
@@ -8,13 +9,14 @@ import { prepareMarkdown } from './markdown/obsidian'
 import { bindPreviewNavigation } from './markdown/navigation'
 import { ingestAssets } from './markdown/assets'
 import './MarkdownConverter.css'
-const documentStyles = `${katexStyles}\n${studyStyles}`
+const documentStyles = `${katexStyles}\n${studyStyles}\n${profileStyles}`
 
 export default function MarkdownConverter({ onBusyChange }) {
   const [source, setSource] = useState('')
   const [title, setTitle] = useState('Study notes')
   const [fileName, setFileName] = useState('')
   const [assets, setAssets] = useState(null)
+  const [mode, setMode] = useState('study')
   const [paper, setPaper] = useState('A4')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -41,8 +43,8 @@ export default function MarkdownConverter({ onBusyChange }) {
   }, [deferredSource, assets])
 
   const documentHtml = useMemo(() => createNotesDocument({
-    ...rendered, title, fileName, paper, styles: documentStyles,
-  }), [rendered, title, fileName, paper])
+    ...rendered, title, fileName, paper, mode, styles: documentStyles,
+  }), [rendered, title, fileName, paper, mode])
 
   const busy = reading || exporting
   const previewReady = loadedDocument === documentHtml && source === deferredSource
@@ -207,7 +209,7 @@ export default function MarkdownConverter({ onBusyChange }) {
             <p className="md-help">{assets?.size || 0} local images · 200 files max · 10 MB/image · 40 MB total. Selecting a new note or sample clears images.</p>
             {assets && <button type="button" className="md-text-button" disabled={busy} onClick={() => setAssets(null)}>Clear local images</button>}
             <div className="md-file-row">
-              <span className="muted">{fileName || 'Or paste your notes below.'}</span>
+              <span className="muted md-file-name">{fileName || 'Or paste your notes below.'}</span>
               <button type="button" className="md-text-button" disabled={busy} onClick={useSample}>Try a sample</button>
             </div>
           </section>
@@ -220,6 +222,7 @@ export default function MarkdownConverter({ onBusyChange }) {
             <select id="notes-paper" value={paper} disabled={busy} onChange={(event) => setPaper(event.target.value)}>
               <option value="A4">A4</option><option value="Letter">US Letter</option>
             </select>
+            <a className="md-preview-jump" href="#notes-preview">Jump to preview and output mode</a>
             <p className="md-help">Exam study theme: book-like serif typography tuned for long revision sessions and Hindi + English mixed notes, clear heading hierarchy, calm callouts, and print-safe tables. The PDF always uses a light page optimized for A4 (Letter also supported).</p>
             <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error)}>
               {exporting ? 'Preparing PDF…' : 'Export PDF'}
@@ -250,16 +253,33 @@ export default function MarkdownConverter({ onBusyChange }) {
       {(error || rendered.error) && <div role="alert" className="notice fail">{error || rendered.error}</div>}
       {status && <div role="status" className="notice ok">{status}</div>}
 
-      <section className="panel markdown-panel md-preview-panel">
+      <section id="notes-preview" className="panel markdown-panel md-preview-panel">
         <div className="md-section-heading">
           <h3>Document preview</h3>
-          <span className="muted">{paper} · Study theme · {previewReady ? 'Up to date' : 'Updating…'}</span>
+          <span className="muted">{paper} · {mode === 'revision' ? 'Revision' : 'Study'} mode · {previewReady ? 'Up to date' : 'Updating…'}</span>
         </div>
+        <div className="md-preview-actions">
+          <fieldset className="md-mode-switch" disabled={busy} aria-describedby="notes-mode-help">
+            <legend>Output mode</legend>
+            <div>
+              {['study', 'revision'].map((value) => (
+                <label key={value}>
+                  <input type="radio" name="notes-mode" value={value} checked={mode === value}
+                    onChange={() => { setMode(value); setStatus('') }} />
+                  <span>{value === 'study' ? 'Study' : 'Revision'}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <button type="button" className="secondary-btn" onClick={exportPdf}
+            disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error)}>Export preview PDF</button>
+        </div>
+        <p id="notes-mode-help" className="md-help">Study: comfortable learning. Revision: compact review. Both use the same notes and standard paper size.</p>
         {!source.trim() && <p className="md-empty">Your rendered study notes will appear here. Add a file, paste Markdown, or try the sample to begin.</p>}
         <iframe ref={previewRef} title="Study notes preview" className={`md-preview ${!source.trim() ? 'md-preview-empty' : ''}`}
           sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox"
           />
-        <p className="md-help">Continuous preview. The print dialog shows final page breaks; text remains selectable in the PDF.</p>
+        <p className="md-help">The preview reflows to the available width without shrinking the text. The print dialog shows final page breaks; text remains selectable in the PDF.</p>
       </section>
     </section>
   )

@@ -19,17 +19,37 @@
 .md-section-heading > span { font-size: 0.75rem; }
 .md-editor-panel { display: flex; flex-direction: column; }
 #markdown-source { width: 100%; min-height: 420px; flex: 1; resize: vertical; border: 1px solid var(--border-soft); border-radius: 10px; background: var(--surface-muted); color: var(--text-main); padding: 1rem; font: 0.88rem/1.8 'SFMono-Regular', Consolas, monospace; tab-size: 2; }
-.md-preview { display: block; width: 100%; height: 800px; background: #edf0f4; border: 1px solid var(--border-soft); border-radius: 10px; }
+.md-preview { display: block; width: 100%; height: clamp(360px, 65vh, 800px); background: #edf0f4; border: 1px solid var(--border-soft); border-radius: 10px; }
 .md-preview-empty { height: 240px; }
 .md-empty { padding: 1rem; margin-bottom: 1rem; background: var(--surface-muted); border-radius: 10px; color: var(--text-soft); }
 .markdown-workspace :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-@media (max-width: 800px) {
+@media (max-width: 960px) {
   .markdown-layout { grid-template-columns: 1fr; }
   .markdown-intro { align-items: flex-start; flex-direction: column; gap: 0.7rem; }
-  .md-preview { height: 640px; }
-  .md-preview-empty { height: 220px; }
 }
 @media (max-width: 480px) {
   .markdown-panel { padding: 1rem; }
   .md-section-heading { align-items: flex-start; flex-direction: column; gap: 0.35rem; }
+}
+
+/* Width-driven layouts for tablets, split windows, and long filenames. */
+.markdown-workspace { min-width: 0; overflow-wrap: anywhere; }
+.markdown-sidebar, .markdown-intro > div { min-width: 0; }
+.md-file-row, .md-section-heading { flex-wrap: wrap; }
+.md-file-name { min-width: 0; flex: 1 1 12rem; }
+.markdown-workspace input[type="file"]:not(.md-file-input) { display: block; width: 100%; max-width: 100%; min-width: 0; margin-top: 0.4rem; }
+.markdown-workspace input[type="file"]::file-selector-button { min-height: 44px; max-width: 100%; white-space: normal; }
+.markdown-workspace button, .md-settings input, .md-settings select { min-height: 44px; max-width: 100%; }
+.md-preview-jump { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); }
+.md-preview-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; justify-content: space-between; }
+.md-mode-switch { border: 0; min-width: 0; margin: 0; padding: 0; }
+.md-mode-switch legend { color: var(--text-soft); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; }
+.md-mode-switch > div { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.md-mode-switch label { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0.5rem 0.85rem; border: 1px solid var(--border-soft); border-radius: 8px; cursor: pointer; }
+.md-mode-switch input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+.md-mode-switch input:checked + span { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.md-mode-switch:disabled label { opacity: 0.6; cursor: not-allowed; }
+@media (max-width: 960px) {
+  .markdown-panel { padding: clamp(1rem, 3vw, 1.5rem); }
+  #markdown-source { min-height: 320px; }
 }

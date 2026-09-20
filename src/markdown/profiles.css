@@ -1,0 +1,47 @@
+/* Controlled output profiles. Study inherits the Phase-2 baseline unchanged.
+ * The body class changes density only; parsing, fonts and pagination are shared.
+ * These rules apply to both screen and print, including narrow-window exports.
+ */
+body.revision-mode { font-size: 11pt; line-height: 1.48; }
+.revision-mode p { margin-bottom: 6px; }
+.revision-mode ul, .revision-mode ol { margin-top: 4px; margin-bottom: 7px; }
+.revision-mode li { margin-top: 1.5px; margin-bottom: 1.5px; }
+.revision-mode li > p { margin-bottom: 3px; }
+.revision-mode h1 { margin-bottom: 11px; }
+.revision-mode h2 { margin-top: 18px; margin-bottom: 7px; }
+.revision-mode h3 { margin-top: 14px; margin-bottom: 5px; }
+.revision-mode h4 { margin-top: 11px; margin-bottom: 4px; }
+.revision-mode blockquote { margin: 9px 0; padding: 6px 11px; }
+.revision-mode .callout { margin: 9px 0; padding: 6px 11px; }
+.revision-mode .callout p { margin-bottom: 4px; }
+.revision-mode .callout p:last-child { margin-bottom: 0; }
+.revision-mode details.callout { padding: 0; }
+.revision-mode details.callout > summary.callout-title { padding: 6px 11px; }
+.revision-mode details.callout > :not(summary) { margin-left: 11px; margin-right: 11px; }
+.revision-mode details.callout > :last-child { margin-bottom: 6px; }
+.revision-mode table { margin: 10px 0; line-height: 1.4; }
+.revision-mode th, .revision-mode td { padding: 3px 7px; }
+.revision-mode pre { margin: 9px 0; padding: 8px 11px; }
+.revision-mode .katex-display { margin: 10px 0; }
+.revision-mode .notes-toc { margin-bottom: 16px; padding-bottom: 10px; }
+.revision-mode .notes-toc ul { margin: 0; }
+.revision-mode .notes-toc li { margin: 1px 0; }
+
+/* Reflow the screen preview, not the printed paper. Never zoom text down to
+ * fit a virtual A4 sheet; large tables/math may scroll within their own box.
+ */
+@media screen {
+  .study-notes { width: 100%; }
+  .notes-header > span { min-width: 0; overflow-wrap: anywhere; }
+  .notes-toc a { display: inline-flex; align-items: center; min-height: 32px; padding-block: 3px; }
+  summary { min-height: 44px; }
+}
+@media screen and (max-width: 800px) {
+  .study-notes { padding: clamp(16px, 4vw, 40px); }
+  .notes-header { flex-wrap: wrap; }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  pre { max-width: 100%; }
+}
+@media screen and (pointer: coarse) {
+  .notes-toc a { min-height: 44px; }
+}

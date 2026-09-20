@@ -148,10 +148,9 @@ pre code { background: none; padding: 0; border: 0; white-space: inherit; font-s
 details { margin: 10px 0; }
 summary { font-weight: 700; color: var(--heading); }
 
-@media (max-width: 600px) {
+@media screen and (max-width: 600px) {
   .study-notes { padding: 20px; }
   .notes-header { flex-wrap: wrap; }
-  body { font-size: 11pt; }
 }
 
 @media print {

@@ -131,7 +131,7 @@ Selection replaces the current image context; selecting a new note/sample clears
 
 **Images & privacy:** Notes and supplied images are processed locally, never uploaded. A `.md` file alone does **not** grant access to neighboring files. Absolute paths, backslashes, traversal segments (including encoded traversal), URL schemes, query/fragment paths, and ambiguous duplicate asset names are rejected. SVG/HTML/JS are not supported assets. Existing HTTP(S) and raster data-URL image support remains; remote Markdown images contact their hosts and need network access. Unavailable remote images are reported at export. CSP, iframe sandbox, sanitization, safe external-link attributes, and untrusted KaTeX remain unchanged.
 
-**Deferred:** ZIP import (folder selection plus explicit files covers the current workflow), cross-note resolution, Markdown-note embeds, vault navigation/search, graph/backlinks, automatic note discovery, advanced block transclusion, Mermaid, Canvas, Dataview/plugins, TOC redesign, citations, Study/Revision modes, and PDF-engine replacement.
+**Deferred:** ZIP import (folder selection plus explicit files covers the current workflow), cross-note resolution, Markdown-note embeds, vault navigation/search, graph/backlinks, automatic note discovery, advanced block transclusion, Mermaid, Canvas, Dataview/plugins, TOC redesign, citations, and PDF-engine replacement.
 
 
 **Offline:** In a production build, visit both converter modes online first so their assets can be cached. Only previously used assets/fonts are available offline; external images are not cached by the app. The Vite development server is not an offline build.
@@ -154,7 +154,31 @@ Support references: [Chrome's page-margin documentation](https://developer.chrom
 
 **Performance and verification:** `renderStudyMarkdown()` returns content, headings, TOC, and frontmatter from one Markdown pipeline. Changing title/paper does not reparse notes. A deterministic 123,571-character fixture (`tests/fixtures/long-study-notes.js`) exercises 300 headings plus 60 each of tables, callouts, images, and math expressions. The Node test reports elapsed rendering time with a generous regression guard; actual interactive performance and pagination still need browser validation. Playwright covers iframe/standalone navigation, keyboard focus, duplicate/Hindi targets, metadata, print requests, and multipage A4/Letter PDFs. Chromium is unavailable in this sandbox, so those assertions are **not verified here**.
 
-Phase 4 intentionally defers dynamic chapter headers, TOC page-number cross-references, a PDF-outline/bookmarks manager, search, typography controls, Study/Revision modes, PDF-engine replacement, and all other previously excluded features.
+Phase 4 intentionally defers dynamic chapter headers, TOC page-number cross-references, a PDF-outline/bookmarks manager, search, arbitrary typography controls, PDF-engine replacement, and all other previously excluded features.
+
+### Study / Revision profiles and tablet preview (Phase 5)
+
+Choose **Study** (default) or **Revision** above the preview. The native radio group supports Tab/arrow keys, a visible radio indicator, and a text-weight/underline selected state—not color alone. A nearby **Export preview PDF** shortcut exports the same current document as the existing Export PDF action. “Jump to preview and output mode” avoids scrolling through the editor to reach these controls.
+
+| Presentation | Study | Revision |
+| --- | --- | --- |
+| Body | 11.5 pt / 1.62 | 11 pt / 1.48 |
+| Paragraph bottom gap | 9 px | 6 px |
+| List item vertical margin | 2.5 px | 1.5 px |
+| Callout padding | 8 × 13 px (9 px bottom) | 6 × 11 px |
+| Table cell padding | 5 × 9 px | 3 × 7 px |
+
+Study retains the existing book-like baseline. Revision reduces spacing moderately, not the content: table text stays 10.5 pt, code stays 9.5 pt, and images retain their aspect ratio. Both inherit the same local Latin/Devanagari font stack, heading hierarchy, math rendering, chapter breaks, and keep-with-content rules. No remote fonts or new typography controls are introduced.
+
+**One pipeline:** the mode is an allowlisted body class (`study-mode` / `revision-mode`) applied by document composition. Changing it does not edit Markdown, reparse notes, resolve assets again, or change the TOC/content markup. The profile is session-only (no persistence); choosing another note keeps the selected profile. Preview readiness gates both export buttons so the selected profile's document is used for printing. Unknown profile values fall back to Study.
+
+**Responsive workspace:** at widths of 960 px or below, settings/editor panels stack. Filenames, messages, headings and action rows wrap; native asset inputs are width-constrained. Important buttons, mode labels, settings and file-picker buttons have at least 44 px targets. The iframe height adapts to window height rather than assuming a full-screen tablet. The same rules apply to Samsung Galaxy Tab split-screen or any other narrow browser window—there are no device-specific dimensions.
+
+**Readable preview, standard PDF:** the iframe reflows text at its natural reading size with smaller screen-only page gutters; it does not scale an entire A4 sheet down to tiny text. Oversized tables and display equations may scroll inside their own region rather than widening the page. Touch-device TOC links and disclosure summaries have comfortable targets. Screen-only reflow/touch rules do not affect printed density. A4 remains the default, Letter remains available, and both retain the existing 16/16/18 mm page margins. The print dialog remains the authority for final page breaks.
+
+**Validation:** unit tests cover default/invalid modes, document-class safety, density rules, mixed-script/TOC/content preservation, fonts, pagination, and responsive CSS boundaries. `tests/browser/profiles.spec.js` covers **600, 720, 840, 960 and 1280 px**, local assets, long filenames, keyboard switching, scrolling/TOC navigation, error wrapping, print requests, and both profiles on A4/Letter. It measures Revision's main-content height against Study and saves actual screenshots and PDFs into ignored test output for visual comparison when run. **Chromium is unavailable in this sandbox: these browser, screenshot, and PDF assertions have not executed.** No visual/physical tablet verification is claimed.
+
+Custom fonts/sizes/colors, user themes, search/bookmarks, nonstandard paper sizes, PDF-engine replacement, and all other excluded features remain deferred.
 
 ### Tests
 
