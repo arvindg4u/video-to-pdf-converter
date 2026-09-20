@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { jsPDF } from 'jspdf'
 import './App.css'
+
+const MarkdownConverter = lazy(() => import('./MarkdownConverter'))
 
 const THEME_KEY = 'theme'
 const MAX_VIDEOS = 20
@@ -8,6 +10,9 @@ const MAX_FRAMES = 1000
 const ACCEPTED_VIDEO_TYPE = 'video/mp4'
 
 function App() {
+  const [mode, setMode] = useState('video')
+  const [markdownOpened, setMarkdownOpened] = useState(false)
+  const [markdownBusy, setMarkdownBusy] = useState(false)
   const [files, setFiles] = useState([])
   const [fps, setFps] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -215,13 +220,25 @@ function App() {
         <div>
           <p className="meta">Performance-optimized converter</p>
           <h1>🎥 PDF Lab</h1>
-          <p className="headline">Convert videos to PDF with ease</p>
+          <p className="headline">Convert videos and Markdown into beautiful PDFs</p>
         </div>
         <button type="button" className="theme-btn" onClick={toggleTheme}>
           {theme === 'light' ? 'Switch Dark' : 'Switch Light'}
         </button>
       </header>
 
+      <nav className="converter-tabs" aria-label="Conversion mode">
+        <button type="button" aria-pressed={mode === 'video'} disabled={markdownBusy} onClick={() => setMode('video')}>Video to PDF</button>
+        <button type="button" aria-pressed={mode === 'markdown'} disabled={loading} onClick={() => { setMarkdownOpened(true); setMode('markdown') }}>Markdown to PDF</button>
+      </nav>
+
+      <div className="markdown-mode" hidden={mode !== 'markdown'}>
+        <Suspense fallback={<p role="status">Loading Markdown converter…</p>}>
+          {markdownOpened && <MarkdownConverter onBusyChange={setMarkdownBusy} />}
+        </Suspense>
+      </div>
+
+      <div className="video-workspace" hidden={mode !== 'video'}>
       <section className="kpi-grid">
         <article className="kpi panel"><span>Videos</span><strong>{files.length}/{MAX_VIDEOS}</strong></article>
         <article className="kpi panel"><span>Total Size</span><strong>{totalSizeInMb} MB</strong></article>
@@ -312,6 +329,7 @@ function App() {
           </section>
         )}
       </form>
+      </div>
     </div>
   )
 }

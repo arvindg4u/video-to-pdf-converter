@@ -407,3 +407,16 @@ h2 {
     font-size: 1.25rem;
   }
 }
+
+.converter-tabs { display: flex; gap: 0.5rem; padding: 0.4rem; background: var(--surface-muted); border-radius: 14px; align-self: flex-start; }
+.converter-tabs button { padding: 0.75rem 1.25rem; border: 0; border-radius: 10px; background: transparent; color: var(--text-soft); font: inherit; font-weight: 600; cursor: pointer; }
+.converter-tabs button[aria-pressed='true'] { background: var(--surface-solid); color: var(--accent); box-shadow: var(--elevation); }
+.converter-tabs button:disabled { cursor: not-allowed; opacity: 0.6; }
+.video-workspace, .markdown-workspace { display: flex; flex-direction: column; gap: 1.5rem; }
+.video-workspace[hidden], .markdown-mode[hidden] { display: none; }
+
+.converter-tabs button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 480px) {
+  .converter-tabs { width: 100%; }
+  .converter-tabs button { flex: 1; padding: 0.6rem; font-size: 0.85rem; }
+}

@@ -1,0 +1,54 @@
+/* Scoped inside the preview/print document; intentionally independent of app dark mode. */
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #edf0f4; color: #243247; font: 11pt/1.7 Georgia, 'Times New Roman', serif; }
+.study-notes { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 16mm; background: #fff; overflow-wrap: anywhere; }
+.notes-header { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 12px; margin-bottom: 28px; border-bottom: 2px solid #27476b; font: 8pt/1.5 Arial, sans-serif; color: #52677e; }
+.notes-header span:first-child { text-transform: uppercase; letter-spacing: 1.4px; flex-shrink: 0; font-weight: 700; }
+.notes-header span:last-child { text-align: right; }
+h1, h2, h3, h4, h5, h6 { font-family: Arial, sans-serif; line-height: 1.3; color: #203e60; break-after: avoid; page-break-after: avoid; }
+h1 { font-size: 26pt; letter-spacing: -0.8px; margin: 0 0 20px; }
+h2 { font-size: 17pt; border-bottom: 1px solid #c9d4df; padding-bottom: 6px; margin: 28px 0 12px; }
+h3 { font-size: 13pt; margin: 22px 0 10px; }
+h4 { font-size: 11.5pt; } h5 { font-size: 10.5pt; } h6 { font-size: 10pt; }
+p { margin: 0 0 13px; orphans: 3; widows: 3; }
+a { color: #235f92; text-decoration: underline; text-underline-offset: 2px; }
+ul, ol { padding-left: 1.6em; margin: 10px 0 16px; }
+li { margin: 4px 0; } li > p { margin-bottom: 6px; }
+li > ul, li > ol { margin: 4px 0; }
+.task-list-item { list-style: none; } .task-list-item input { margin-left: -1.35em; margin-right: 0.5em; accent-color: #27476b; }
+blockquote { border-left: 3px solid #b39456; background: #faf7f0; margin: 18px 0; padding: 12px 18px; color: #4e483d; }
+blockquote p:last-child { margin-bottom: 0; }
+hr { border: 0; border-top: 1px solid #c9d4df; margin: 24px 0; }
+strong { color: #142b45; }
+code, pre { font-family: 'Courier New', monospace; font-size: 9pt; }
+code { background: #edf2f7; padding: 2px 4px; border-radius: 3px; }
+pre { background: #f3f6fa; border: 1px solid #dce4ed; border-left: 3px solid #526f92; padding: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+pre code { background: none; padding: 0; border: 0; white-space: inherit; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #7746a0; font-weight: bold; }
+.hljs-string, .hljs-regexp, .hljs-addition { color: #266449; }
+.hljs-number, .hljs-symbol, .hljs-built_in { color: #96500e; }
+.hljs-title, .hljs-section, .hljs-function { color: #245b8c; }
+.hljs-comment, .hljs-quote { color: #617382; font-style: italic; }
+.hljs-attr, .hljs-variable, .hljs-deletion { color: #9b3a40; }
+table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 10pt; table-layout: fixed; }
+th, td { border: 1px solid #ccd7e2; padding: 8px 10px; vertical-align: top; overflow-wrap: anywhere; }
+th { background: #e9eff6; color: #203e60; font-family: Arial, sans-serif; text-align: left; }
+tr:nth-child(even) td { background: #f7f9fc; }
+thead { display: table-header-group; } tr { break-inside: avoid; }
+img { max-width: 100%; max-height: 220mm; height: auto; object-fit: contain; break-inside: avoid; }
+.katex { font-size: 1.08em; } .katex-display { margin: 20px 0; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.footnotes { border-top: 1px solid #ccd7e2; margin-top: 30px; font-size: 9pt; }
+.footnotes h2 { font-size: 12pt; border: 0; }
+.notes-footer { border-top: 1px solid #ccd7e2; margin-top: 36px; padding-top: 10px; font: 8pt Arial, sans-serif; color: #65768a; text-align: center; }
+details { margin: 12px 0; } summary { font-weight: bold; }
+@media (max-width: 600px) { .study-notes { padding: 22px; } .notes-header { flex-wrap: wrap; } }
+@media print {
+  html, body { background: #fff; }
+  body { font-size: 11pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .study-notes { max-width: none; min-height: 0; margin: 0; padding: 0; }
+  pre, blockquote { box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .katex-display { overflow: visible; break-inside: avoid; }
+  a { text-decoration-thickness: 0.5px; }
+  .notes-footer { break-inside: avoid; }
+}

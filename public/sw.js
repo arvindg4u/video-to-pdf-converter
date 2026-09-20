@@ -1,46 +1,61 @@
-const CACHE_NAME = 'video-to-pdf-v1'
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/src/main.jsx',
-  '/src/App.jsx',
-  '/src/App.css',
-  '/src/index.css'
-]
+const CACHE_NAME = 'video-to-pdf-v2'
+const APP_SHELL = ['/', '/index.html', '/icon.svg', '/manifest.json']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache opened')
-        return cache.addAll(urlsToCache)
+      .then(async (cache) => {
+        await cache.addAll(APP_SHELL)
+        // The initial page can load before the worker controls it. Precache
+        // Vite's production entry assets too so that first offline reload works.
+        const shell = await cache.match('/index.html')
+        const html = await shell.text()
+        const entryAssets = Array.from(html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g), (match) => match[1])
+        await cache.addAll(entryAssets)
       })
+      .then(() => self.skipWaiting())
   )
 })
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response
+  const { request } = event
+  const url = new URL(request.url)
+  // Never cache uploaded content, external Markdown images, or Vite's dev modules.
+  if (request.method !== 'GET' || url.origin !== self.location.origin ||
+      (!APP_SHELL.includes(url.pathname) && !url.pathname.startsWith('/assets/'))) return
+
+  // Network-first avoids serving an old app shell after a feature update.
+  // Production chunks and bundled math fonts are cached as they are used.
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME)
+    try {
+      const response = await fetch(request)
+      if (response.ok) {
+        // Cache storage can be full or unavailable. A failed write must not
+        // turn a valid network response into a failed script/font request.
+        try {
+          await cache.put(request, response.clone())
+        } catch {
+          // Keep serving the live app even when offline storage is unavailable.
         }
-        return fetch(event.request)
-      })
-  )
+      }
+      return response
+    } catch (error) {
+      // These are public, same-origin static files; Vite varies responses by
+      // Origin, which differs between precache requests and module requests.
+      const cached = await cache.match(request, { ignoreVary: true })
+      if (cached) return cached
+      throw error
+    }
+  })())
 })
 
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME]
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName)
-          }
-        })
-      )
-    })
-  )
+  event.waitUntil((async () => {
+    const keys = await caches.keys()
+    await Promise.all(keys
+      .filter((key) => key.startsWith('video-to-pdf-') && key !== CACHE_NAME)
+      .map((key) => caches.delete(key)))
+    await self.clients.claim()
+  })())
 })
