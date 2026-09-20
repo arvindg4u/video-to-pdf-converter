@@ -4,11 +4,13 @@
 
 ## 1. Core concepts
 
-**Active recall** strengthens memory by retrieving information rather than simply rereading it. Combine it with **spaced repetition** for durable learning.[^1]
+**Active recall** strengthens memory by retrieving information rather than simply rereading it. Combine it with **spaced repetition** for durable learning.[^1] **स्मृति (Memory)** को तीन चरणों में समझें — encoding, storage, और retrieval।
 
-> **Key takeaway**
->
+> [!TIP] Key takeaway
 > Test yourself before checking your notes. A little difficulty during retrieval can improve long-term retention.
+>
+> - Close the notes, then recall
+> - Check, correct, repeat
 
 ### The forgetting curve
 
@@ -49,6 +51,9 @@ def review_days(start_day):
 - [x] Compare study strategies
 - [ ] Explain the forgetting curve without notes
 - [ ] Complete a practice quiz
+
+> [!WARNING] Common exam trap
+> Confusing **negative reinforcement** (removing something unpleasant) with **punishment** (adding something unpleasant).
 
 ~~Reread everything.~~ **Retrieve, check, repeat.**
 

@@ -1,0 +1,221 @@
+/*
+ * Phase 2 — Exam study theme.
+ * Book-like, low-fatigue typography for long revision sessions and clean
+ * printing. Restrained and professional: no gradients, no neon, no loud
+ * colored boxes, no oversized headings. Scoped inside the preview/print
+ * document; intentionally independent of app dark mode.
+ *
+ * Font strategy (offline-safe, deterministic): local system fonts only —
+ * no remote font dependency, so PDF printing never stalls on font loading.
+ * Latin faces are listed first, then Devanagari faces; browsers fall back
+ * per character, so Hindi glyphs resolve to Noto Serif Devanagari /
+ * Kohinoor / Mangal while English stays in the Latin book face. KaTeX
+ * bundles its own fonts for math.
+ */
+:root {
+  color-scheme: light;
+  --font-body: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, 'Noto Serif', Georgia, 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Kohinoor Devanagari', Mangal, 'Lohit Devanagari', serif;
+  --font-meta: 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --ink: #232a31;
+  --ink-strong: #16212c;
+  --ink-muted: #5b6874;
+  --heading: #1d2c3d;
+  --rule: #c9d2db;
+  --rule-soft: #dfe5eb;
+  --accent: #2f5578;
+  --code-bg: #f2f4f6;
+  --pre-bg: #f7f8fa;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #eceef1; color: var(--ink); font: 11.5pt/1.62 var(--font-body); font-variant-numeric: oldstyle-nums proportional-nums; }
+.study-notes { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 16mm; background: #fff; overflow-wrap: break-word; }
+
+/* --- running header / footer (meta lines, not decoration) --- */
+.notes-header { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 8px; margin-bottom: 22px; border-bottom: 1.5px solid var(--heading); font: 8.5pt/1.5 var(--font-meta); color: var(--ink-muted); }
+.notes-header span:first-child { text-transform: uppercase; letter-spacing: 1.2px; flex-shrink: 0; font-weight: 600; }
+.notes-header span:last-child { text-align: right; }
+.notes-footer { border-top: 1px solid var(--rule); margin-top: 30px; padding-top: 8px; font: 8.5pt var(--font-meta); color: var(--ink-muted); text-align: center; }
+
+/* --- heading hierarchy: chapter → topic → subtopic → detail --- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  color: var(--heading);
+  line-height: 1.32;
+  text-wrap: balance;
+  break-after: avoid;
+  break-inside: avoid;
+  page-break-after: avoid;
+}
+h1 { font-size: 17pt; letter-spacing: -0.2px; margin: 4px 0 14px; padding-bottom: 6px; border-bottom: 1.5px solid var(--heading); }
+h2 { font-size: 13.5pt; margin: 24px 0 9px; padding-bottom: 3px; border-bottom: 1px solid var(--rule); }
+h3 { font-size: 12pt; margin: 19px 0 7px; }
+h4 { font-size: 11.5pt; margin: 15px 0 5px; }
+h5 { font-size: 11pt; margin: 13px 0 4px; }
+h6 { font-size: 10.5pt; margin: 13px 0 4px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.6px; }
+/* Keep a heading with at least two lines of its content. */
+h1, h2, h3, h4 { break-after: avoid-page; }
+
+/* --- body text --- */
+p { margin: 0 0 9px; orphans: 3; widows: 3; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 0.5px; }
+strong { color: var(--ink-strong); font-weight: 700; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 20px 0; }
+
+/* --- lists: compact exam-notes rhythm, still comfortable --- */
+ul, ol { padding-left: 1.45em; margin: 6px 0 11px; }
+li { margin: 2.5px 0; }
+li > p { margin-bottom: 5px; }
+li > ul, li > ol { margin: 2.5px 0; }
+ul ul, ol ol, ul ol, ol ul { margin-bottom: 2.5px; }
+.task-list-item { list-style: none; margin-left: -1.2em; }
+.task-list-item input { margin-right: 0.5em; accent-color: var(--accent); }
+
+/* --- blockquotes (ordinary) --- */
+blockquote { border-left: 3px solid var(--rule); background: #f8f9fa; margin: 12px 0; padding: 8px 14px; color: #404a54; break-inside: avoid; }
+blockquote p:last-child { margin-bottom: 0; }
+
+/* --- Obsidian callouts: subtle, print-friendly study blocks --- */
+.callout {
+  margin: 12px 0;
+  padding: 8px 13px 9px;
+  border-left: 3px solid var(--callout-line, #7b8b9b);
+  background: var(--callout-bg, #f4f6f8);
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.callout-title {
+  margin: 0 0 4px;
+  font: 600 9.5pt/1.4 var(--font-meta);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--callout-line, #55636f);
+}
+.callout > :nth-child(2) { margin-top: 0; }
+.callout p { margin-bottom: 6px; }
+.callout p:last-child { margin-bottom: 0; }
+.callout ul, .callout ol { margin: 4px 0 7px; }
+details.callout { padding: 0; }
+details.callout > summary.callout-title { padding: 8px 13px; margin: 0; cursor: pointer; list-style-position: inside; }
+details.callout[open] > summary.callout-title { border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+details.callout > :not(summary) { margin-left: 13px; margin-right: 13px; }
+details.callout > :last-child { margin-bottom: 9px; }
+/* Five muted variants only. */
+.callout-note { --callout-line: #64748b; --callout-bg: #f4f6f8; }
+.callout-tip { --callout-line: #53795c; --callout-bg: #f3f7f3; }
+.callout-important { --callout-line: #4a639f; --callout-bg: #f3f5fa; }
+.callout-warning { --callout-line: #9a7b3f; --callout-bg: #faf6ed; }
+.callout-caution { --callout-line: #9c5f4b; --callout-bg: #faf3f0; }
+
+/* --- tables: readable cells, distinct header, repeats across pages --- */
+table { width: 100%; border-collapse: collapse; margin: 13px 0; font-size: 10.5pt; line-height: 1.45; }
+th, td { border: 1px solid var(--rule-soft); padding: 5px 9px; vertical-align: top; overflow-wrap: anywhere; text-align: left; }
+th { background: #e9edf1; border-color: var(--rule); color: var(--heading); font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+tbody tr:nth-child(even) td { background: #fafbfc; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+
+/* --- images: aspect preserved, never stretched, page-safe --- */
+img { max-width: 100%; max-height: 210mm; height: auto; object-fit: contain; break-inside: avoid; page-break-inside: avoid; }
+p > img:only-child { display: block; margin: 10px auto; }
+
+/* --- code --- */
+code, pre { font-family: var(--font-mono); font-size: 9.5pt; }
+code { background: var(--code-bg); padding: 1.5px 4px; border-radius: 3px; }
+pre { background: var(--pre-bg); border: 1px solid var(--rule-soft); border-left: 3px solid #9fb0c0; padding: 10px 13px; line-height: 1.5; margin: 11px 0; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; break-inside: auto; }
+pre code { background: none; padding: 0; border: 0; white-space: inherit; font-size: inherit; }
+/* Calm syntax-highlight palette (no neon). */
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #6a4a8f; font-weight: 600; }
+.hljs-string, .hljs-regexp, .hljs-addition { color: #2c6247; }
+.hljs-number, .hljs-symbol, .hljs-built_in { color: #8a5410; }
+.hljs-title, .hljs-section, .hljs-function { color: #2a5580; }
+.hljs-comment, .hljs-quote { color: #62707d; font-style: italic; }
+.hljs-attr, .hljs-variable, .hljs-deletion { color: #8f4a50; }
+
+/* --- math (KaTeX): readable inside Hindi/English notes --- */
+.katex { font-size: 1.06em; }
+.katex-display { margin: 13px 0; overflow-x: auto; overflow-y: hidden; padding: 3px 0; }
+.katex-display > .katex { text-align: left; }
+
+/* --- footnotes --- */
+.footnotes { border-top: 1px solid var(--rule); margin-top: 26px; font-size: 9.5pt; color: #3c4650; }
+.footnotes h2 { font-size: 11.5pt; border: 0; text-transform: none; }
+.footnotes ol { padding-left: 1.3em; }
+
+details { margin: 10px 0; }
+summary { font-weight: 700; color: var(--heading); }
+
+@media screen and (max-width: 600px) {
+  .study-notes { padding: 20px; }
+  .notes-header { flex-wrap: wrap; }
+}
+
+@media print {
+  html, body { background: #fff; }
+  body { font-size: 11.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .study-notes { max-width: none; min-height: 0; margin: 0; padding: 0; }
+  /* Keep structure intact across page breaks. */
+  h1, h2, h3, h4 { break-after: avoid-page; page-break-after: avoid; }
+  p, li { orphans: 3; widows: 3; }
+  pre, blockquote, .callout { box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .katex-display { overflow: visible; break-inside: avoid; page-break-inside: avoid; }
+  table { break-inside: auto; }
+  thead { display: table-header-group; }
+  tr, img, .callout, figure { break-inside: avoid; page-break-inside: avoid; }
+  a { color: var(--accent); text-decoration-thickness: 0.5px; }
+  .notes-footer { break-inside: avoid; }
+  .notes-header { margin-bottom: 18px; }
+}
+
+/* Inline Obsidian metadata: no navigation, badges, or decorative boxes. */
+.study-notes .obsidian-tag {
+  color: #59616b;
+  font-size: 0.92em;
+}
+
+/* Long-document navigation, subordinate to the existing study typography. */
+.notes-frontmatter { margin-bottom: 16px; }
+.notes-document-title { font-weight: 700; color: var(--heading); }
+.notes-subject { font: 9pt/1.5 var(--font-meta); color: var(--ink-muted); }
+.notes-toc { margin: 0 0 22px; padding: 0 0 14px; border-bottom: 1px solid var(--rule); font-size: 10.5pt; line-height: 1.45; }
+.notes-toc-title { font-weight: 700; margin-bottom: 6px; break-after: avoid; }
+.notes-toc ul { list-style: none; margin: 0; padding-left: 1.2em; }
+.notes-toc > ul { padding-left: 0; }
+.notes-toc li { margin: 2px 0; }
+.notes-toc a { color: inherit; }
+.notes-toc a:focus-visible, main :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+main h1, main h2, main h3 { scroll-margin-top: 12px; }
+@media print {
+  main > h1.notes-chapter { break-before: page; page-break-before: always; }
+  /* A large TOC may span pages; don't keep whole chapter subtrees together. */
+  .notes-toc, .notes-toc li, .notes-toc ul { break-inside: auto; }
+  .notes-toc a { break-inside: avoid; }
+  .notes-frontmatter { break-inside: avoid; }
+}
+@media print {
+  .notes-toc a:focus-visible, main :focus-visible { outline: none; }
+}
+
+/* Print hardening: both standard pages use 16/16/18 mm margins. Images fit
+ * below the shorter Letter content height (245.4 mm), with caption allowance.
+ * Fragmentation avoidance is a preference; oversized blocks must still split.
+ */
+@media print {
+  .study-notes, main { min-width: 0; overflow-wrap: anywhere; }
+  .notes-header { flex-wrap: wrap; }
+  .notes-header span { min-width: 0; overflow-wrap: anywhere; }
+  img { max-width: 100%; max-height: 210mm; }
+  table { table-layout: fixed; }
+  th, td { min-width: 0; overflow-wrap: anywhere; }
+  pre { break-inside: avoid; page-break-inside: avoid; overflow: visible; }
+  pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* KaTeX can wrap between top-level relation/operator groups. Intrinsically
+   * indivisible matrices/fractions remain a browser limitation, not silently
+   * scaled to illegibility or hidden behind a print scrollport. */
+  .katex-display > .katex { white-space: normal; max-width: 100%; }
+  .katex-display .katex-html { white-space: normal; }
+  .notes-toc a { display: inline; padding: 0; min-height: 0; }
+}

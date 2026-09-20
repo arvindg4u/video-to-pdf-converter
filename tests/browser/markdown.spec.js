@@ -23,6 +23,10 @@ test('uploads Markdown, renders all study elements, and retains edits across mod
   await expect(preview.locator('.hljs-keyword')).not.toHaveCount(0)
   await expect(preview.locator('input[type="checkbox"]')).toHaveCount(4)
   await expect(preview.locator('section[data-footnotes]')).toHaveCount(1)
+  // Phase 2: the sample demonstrates Obsidian callouts in the study theme.
+  await expect(preview.locator('.callout')).toHaveCount(2)
+  await expect(preview.locator('.callout-tip .callout-title')).toContainText('Key takeaway')
+  await expect(preview.locator('.callout-warning .callout-title')).toContainText('Common exam trap')
   await expect(page.getByLabel('Document title')).toHaveValue('academic-study-notes')
   await page.getByLabel('Edit Markdown').fill('# Edited notes\n\n**Important**')
   await expect(preview.getByRole('heading', { name: 'Edited notes' })).toBeVisible()
@@ -33,18 +37,156 @@ test('uploads Markdown, renders all study elements, and retains edits across mod
 })
 
 test('rejects invalid, empty and oversized files without losing previous notes', async ({ page }) => {
+  test.setTimeout(120000)
   await sample(page)
   const input = page.getByLabel('Upload Markdown file')
   await input.setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByRole('alert')).toContainText('Choose one Markdown file')
   await input.setInputFiles({ name: 'empty.md', mimeType: '', buffer: Buffer.from('  ') })
   await expect(page.getByRole('alert')).toContainText('empty')
-  await input.setInputFiles({ name: 'large.md', mimeType: '', buffer: Buffer.alloc(1024 * 1024 + 1, 'a') })
+  await input.setInputFiles({ name: 'large.md', mimeType: '', buffer: Buffer.alloc(5 * 1024 * 1024 + 1, 'a') })
   await expect(page.getByRole('alert')).toContainText('too large')
   await expect(page.getByLabel('Edit Markdown')).toContainText('Learning & memory')
+  // Exercise the byte-limit boundary without making this validation test
+  // benchmark one pathological five-megabyte soft-break paragraph. Actual
+  // large rendered content is covered by the 300-heading PDF fixtures.
+  const prefix = '# Big notes\n\nA study paragraph.\n\n<!-- '
+  const bigNotes = Buffer.from(prefix + 'x'.repeat(5 * 1024 * 1024 - prefix.length - 8) + ' -->')
+  await input.setInputFiles({ name: 'big-but-fine.md', mimeType: '', buffer: bigNotes })
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByLabel('Edit Markdown')).toContainText('Big notes', { timeout: 20000 })
   await input.setInputFiles({ name: 'NOTES.MARKDOWN', mimeType: '', buffer: Buffer.from('# New notes') })
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(page.frameLocator('iframe').getByRole('heading', { name: 'New notes' })).toBeVisible()
+})
+
+test('imports an Obsidian notes file: frontmatter set aside, syntax preserved, Hindi rendered', async ({ page }) => {
+  await openMarkdown(page)
+  const obsidian = [
+    '---',
+    'title: Indian Polity',
+    'subject: RAS',
+    'tags:',
+    '  - polity',
+    '  - संविधान',
+    '---',
+    '',
+    '# भारतीय संविधान (Indian Polity)',
+    '',
+    '**मौलिक अधिकार** — see [[Fundamental Rights]] and [[Page#Heading]].',
+    '',
+    '![[image.png]]',
+    '',
+    'Review #polity ^block-1',
+    '',
+  ].join('\n')
+  // Uppercase extension, mixed Hindi + English UTF-8 content.
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.MD', mimeType: '', buffer: Buffer.from(obsidian, 'utf8') })
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  const preview = page.frameLocator('iframe[title="Study notes preview"]')
+  await expect(preview.getByRole('heading', { name: 'भारतीय संविधान (Indian Polity)' })).toBeVisible()
+  await expect(preview.locator('body')).toContainText('मौलिक अधिकार')
+  // Frontmatter is metadata, never document content.
+  await expect(preview.locator('body')).not.toContainText('subject: RAS')
+  await expect(preview.locator('body')).not.toContainText('title: Indian Polity')
+  // Phase 3 renders supported syntax; missing assets remain explicit.
+  await expect(preview.locator('body')).toContainText('Fundamental Rights')
+  await expect(preview.locator('body')).toContainText('Page#Heading')
+  await expect(preview.locator('body')).toContainText('[Image unavailable: image.png]')
+  await expect(preview.locator('body')).toContainText('#polity')
+  await expect(preview.locator('#user-content-obsidian-block-block-1')).toHaveCount(1)
+  // Frontmatter title becomes the document title; file name is shown.
+  await expect(page.getByLabel('Document title')).toHaveValue('Indian Polity')
+  await expect(page.locator('.md-file-row')).toContainText('Complete Notes.MD')
+  await expect(page.locator('.md-editor-panel')).toContainText('YAML frontmatter detected')
+  // The existing PDF/print flow still works for imported files.
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  const frame = page.frames().find((candidate) => candidate.parentFrame())
+  await frame.evaluate(() => { window.print = () => { window.printRequested = true } })
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await frame.evaluate(() => window.printRequested)).toBe(true)
+  expect(await frame.evaluate(() => document.title)).toBe('Indian Polity')
+})
+
+test('renders the exam study theme: typography, callouts, tables, math, images, print', async ({ page }) => {
+  await openMarkdown(page)
+  const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9AAAAABJRU5ErkJggg=='
+  const notes = [
+    '---',
+    'title: Polity Complete Notes',
+    'subject: RAS',
+    '---',
+    '',
+    '# भारतीय संविधान — Indian Polity',
+    '',
+    'अनुच्छेद 12–35 — **मौलिक अधिकार** (Fundamental Rights) with mixed script and $E = mc^2$.',
+    '',
+    '> [!NOTE] संक्षेप में',
+    '> - Point one — हिंदी',
+    '> - Point two — English',
+    '',
+    '> [!WARNING]- Collapsible trap',
+    '> Hidden detail line.',
+    '',
+    '## Topics',
+    '',
+    '| अनुच्छेद | Right |',
+    '| - | - |',
+    '| 14 | Equality |',
+    '',
+    '```python',
+    'def recall(): pass',
+    '```',
+    '',
+    '$$',
+    '\\frac{a}{b}',
+    '$$',
+    '',
+    `![Pixel](${pixel})`,
+  ].join('\n')
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.md', mimeType: '', buffer: Buffer.from(notes, 'utf8') })
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByLabel('Document title')).toHaveValue('Polity Complete Notes')
+  const frame = page.frames().find((candidate) => candidate.parentFrame())
+
+  // Typography: Devanagari-capable local stack, ~11.5pt body, relaxed leading, white paper.
+  const typography = await frame.locator('body').evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return { family: styles.fontFamily, size: parseFloat(styles.fontSize), lineHeight: parseFloat(styles.lineHeight) }
+  })
+  expect(typography.family).toContain('Noto Serif Devanagari')
+  expect(Math.abs(typography.size - (11.5 * 96) / 72)).toBeLessThan(0.5)
+  expect(typography.lineHeight / typography.size).toBeGreaterThan(1.5)
+  expect(await frame.locator('.study-notes').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)')
+
+  // Hindi + English mixed content renders.
+  await expect(frame.getByRole('heading', { name: 'भारतीय संविधान — Indian Polity' })).toBeVisible()
+  await expect(frame.locator('main')).toContainText('अनुच्छेद 12–35')
+
+  // Callouts: styled variant with nested list, and a collapsible one closed in preview.
+  await expect(frame.locator('.callout-note .callout-title')).toContainText('संक्षेप में')
+  await expect(frame.locator('.callout-note li')).toHaveCount(2)
+  const collapsed = frame.locator('details.callout-warning')
+  await expect(collapsed.locator('summary')).toContainText('Collapsible trap')
+  expect(await collapsed.evaluate((element) => element.open)).toBe(false)
+
+  // Tables, code highlighting, display math, and an unstretched image.
+  await expect(frame.locator('table th').first()).toHaveText('अनुच्छेद')
+  await expect(frame.locator('.hljs-keyword')).not.toHaveCount(0)
+  await expect(frame.locator('.katex-display')).toHaveCount(1)
+  const imageBox = await frame.locator('img').first().boundingBox()
+  expect(imageBox.width).toBeGreaterThan(0)
+  expect(Math.abs(imageBox.width - imageBox.height)).toBeLessThan(1)
+
+  // The print flow still works: collapsible callouts open, margins apply.
+  await frame.evaluate(() => { window.print = () => { window.printRequested = true } })
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await frame.evaluate(() => window.printRequested)).toBe(true)
+  expect(await frame.evaluate(() => document.querySelector('details.callout-warning').open)).toBe(false)
+  expect(await frame.evaluate(() => document.querySelector('style').textContent)).toContain('16mm 16mm 18mm')
 })
 
 test('accepts drag and drop and clears export eligibility when editor is empty', async ({ page }) => {
@@ -67,14 +209,14 @@ test('isolates unsafe HTML, resolves internal anchors, and keeps paper light in 
   const frame = page.frames().find((frame) => frame.parentFrame())
   expect(await frame.locator('script, [onerror]').count()).toBe(0)
   expect(await page.evaluate(() => window.hacked)).toBeUndefined()
-  expect(await frame.evaluate(() => Array.from(document.querySelectorAll('a[href^="#"]')).every((a) => document.getElementById(a.hash.slice(1))))).toBe(true)
+  expect(await frame.evaluate(() => Array.from(document.querySelectorAll('a[href^="about:srcdoc#"]')).every((a) => document.getElementById(a.hash.slice(1))))).toBe(true)
   await page.getByRole('button', { name: 'Switch Dark' }).click()
   expect(await frame.locator('.study-notes').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)')
 })
 
 test('requests printing of only the notes after fonts load, with the chosen paper size', async ({ page }) => {
   await sample(page)
-  await page.getByLabel('Paper size').selectOption('Letter')
+  await page.locator('#notes-paper').selectOption('Letter')
   await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
   const frame = page.frames().find((frame) => frame.parentFrame())
   await frame.evaluate(() => { window.print = () => { window.printRequested = true } })
@@ -88,7 +230,7 @@ test('requests printing of only the notes after fonts load, with the chosen pape
 
 test('produces a multipage PDF from a long rendered document without horizontal overflow', async ({ page }, testInfo) => {
   await sample(page)
-  await page.getByLabel('Edit Markdown').fill('# Long study notes\n\n' + Array.from({ length: 20 }, (_, i) => `## Topic ${i + 1}\n\nA useful explanation with **key terms** and an equation $E = mc^2$.\n\n- Recall the concept\n- Apply it to an example\n\n`).join(''))
+  await page.getByLabel('Edit Markdown').fill('# Long study notes — दीर्घ अध्ययन सामग्री\n\n' + Array.from({ length: 20 }, (_, i) => `## Topic ${i + 1}\n\nA useful explanation with **key terms** and an equation $E = mc^2$.\n\n- Recall the concept\n- Apply it to an example\n\n> [!NOTE] Revision point ${i + 1}\n> याद रखें — remember this before the exam.\n\n`).join(''))
   await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
   const html = await page.locator('iframe').getAttribute('srcdoc')
   await page.setContent(html)
@@ -156,7 +298,7 @@ test('rapid edits and paper changes export only the latest document', async ({ p
   await page.getByLabel('Edit Markdown').fill('# Earlier revision')
   await page.getByLabel('Edit Markdown').fill('# Latest revision\n\nReady for print.')
   await page.getByLabel('Document title').fill('Final title')
-  await page.getByLabel('Paper size').selectOption('Letter')
+  await page.locator('#notes-paper').selectOption('Letter')
   await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
   await page.evaluate(() => {
     document.querySelector('iframe').contentWindow.addEventListener('beforeprint', () => {
@@ -170,4 +312,114 @@ test('rapid edits and paper changes export only the latest document', async ({ p
   expect(printed.text).toContain('Latest revision')
   expect(printed.text).not.toContain('Earlier revision')
   expect(printed.styles).toContain('size: Letter')
+})
+
+test('Obsidian syntax and explicitly selected assets survive preview and PDF export', async ({ page }) => {
+  await openMarkdown(page)
+  const markdown = '---\ntitle: Constitution\n---\n# Fundamental Rights\n\nभारतीय संविधान\n\n[[Indian Constitution|Constitution]] [[#Fundamental Rights|Read section]] [[#Missing]] [[#^fact|Fact]] [[#^absent]]\n\nImportant fact ^fact\n\n#polity #RAS/prelims\n\n> [!TIP] Review\n> Hindi + English\n\n![[image.png|500]]\n\n![Relative](image.png)\n\n![[missing.png]]\n\n![[../../secret.png]]\n\n[[https://evil.example|Not a URL]]\n\n<script>window.__pwned = true</script>'
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.md', mimeType: 'text/markdown', buffer: Buffer.from(markdown) })
+  const preview = page.frameLocator('iframe[title="Study notes preview"]')
+  await expect(preview.locator('main')).toContainText('Image unavailable: image.png')
+  await page.getByLabel('Add image files', { exact: true }).setInputFiles({
+    name: 'image.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'),
+  })
+  await expect(preview.locator('img')).toHaveCount(2)
+  await expect(preview.locator('img').first()).toHaveAttribute('width', '500')
+  await expect.poll(() => preview.locator('img').first().evaluate((img) => img.naturalWidth)).toBe(1)
+  await expect(preview.locator('.obsidian-tag')).toHaveCount(2)
+  await expect(preview.locator('.callout-tip')).toHaveCount(1)
+  await expect(preview.locator('main')).toContainText('भारतीय संविधान')
+  await expect(preview.locator('main')).toContainText('Constitution')
+  await expect(preview.getByRole('link', { name: 'Read section' })).toHaveAttribute('href', 'about:srcdoc#user-content-fundamental-rights')
+  await expect(preview.getByRole('link', { name: 'Fact', exact: true })).toHaveAttribute('href', 'about:srcdoc#user-content-obsidian-block-fact')
+  await expect(preview.locator('a')).toHaveCount(2)
+  await expect(preview.locator('main')).toContainText('Image unavailable: missing.png')
+  await expect(preview.locator('main')).toContainText('Image unavailable: ../../secret.png')
+  await expect(preview.locator('script, iframe')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  await page.locator('iframe[title="Study notes preview"]').evaluate((frame) => {
+    frame.contentWindow.print = () => { frame.contentWindow.__printed = true }
+  })
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await page.locator('iframe[title="Study notes preview"]').evaluate((frame) => frame.contentWindow.__printed)).toBe(true)
+  await page.getByRole('button', { name: 'Clear local images' }).click()
+  await expect(preview.locator('img')).toHaveCount(0)
+})
+
+test('selected image folder preserves nested paths and rejects disguised image content', async ({ page }) => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const folder = await mkdtemp(join(tmpdir(), 'pdf-assets-'))
+  try {
+    await mkdir(join(folder, 'attachments'))
+    await writeFile(join(folder, 'attachments', 'image.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'))
+    await writeFile(join(folder, 'ignored.html'), '<script>alert(1)</script>')
+    await openMarkdown(page)
+    await page.getByLabel('Edit Markdown').fill('![Constitution](attachments/image.png)\n\n![[image.png]]')
+    await page.getByLabel('Add image folder', { exact: true }).setInputFiles(folder)
+    const preview = page.frameLocator('iframe[title="Study notes preview"]')
+    await expect(preview.locator('img')).toHaveCount(2)
+    await expect(page.getByRole('status')).toContainText('1 unsupported files ignored')
+    await page.getByLabel('Add image files', { exact: true }).setInputFiles({ name: 'attack.png', mimeType: 'image/png', buffer: Buffer.from('<script>alert(1)</script>') })
+    await expect(page.getByRole('alert')).toContainText('Invalid image content')
+    await expect(preview.locator('img')).toHaveCount(2) // failed imports are atomic
+    await page.getByRole('button', { name: 'Try a sample' }).click()
+    await expect(page.getByText('0 local images', { exact: false })).toBeVisible()
+  } finally { await rm(folder, { recursive: true, force: true }) }
+})
+
+test('long-note TOC supports native targets, keyboard navigation, metadata and multipage printing', async ({ page }, testInfo) => {
+  test.setTimeout(90000)
+  const { longStudyNotes } = await import('../fixtures/long-study-notes.js')
+  await openMarkdown(page)
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.md', mimeType: 'text/markdown', buffer: Buffer.from(longStudyNotes()) })
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  const preview = page.frameLocator('iframe[title="Study notes preview"]')
+  const toc = preview.getByRole('navigation', { name: 'Contents' })
+  await expect(toc.locator('a')).toHaveCount(300)
+  await expect(toc.locator(':scope > ul > li')).toHaveCount(60)
+  await expect(toc.locator(':scope > ul > li').first().locator(':scope > ul > li')).toHaveCount(2)
+  await expect(toc.locator(':scope > ul > li').first().locator(':scope > ul > li').first().locator(':scope > ul > li')).toHaveCount(1)
+  await expect(preview.locator('.notes-document-title')).toHaveText('RAS Complete Notes')
+  await expect(preview.locator('.notes-subject')).toHaveText('Indian Polity')
+  const title = await page.locator('iframe').evaluate((frame) => frame.contentDocument.title)
+  expect(title).toBe('RAS Complete Notes')
+  await toc.getByRole('link', { name: 'अध्याय 20 — Indian Polity', exact: true }).click()
+  const chapter = preview.getByRole('heading', { name: 'अध्याय 20 — Indian Polity', exact: true })
+  await expect(chapter).toBeFocused()
+  await expect(chapter).toHaveAttribute('id', 'user-content-अध्याय-20--indian-polity')
+  expect(await chapter.evaluate((node) => node.matches(':target'))).toBe(true)
+  // Repeated headings get distinct slugs; keyboard activation lands on the second.
+  const duplicateLink = toc.getByRole('link', { name: 'Fundamental Rights', exact: true }).nth(1)
+  await duplicateLink.focus()
+  await page.keyboard.press('Enter')
+  await expect(preview.locator('#user-content-fundamental-rights-1')).toBeFocused()
+  await expect(preview.locator('table')).toHaveCount(60)
+  await expect(preview.locator('.callout-tip')).toHaveCount(60)
+  await expect(preview.locator('img')).toHaveCount(60)
+  await expect(preview.locator('.katex')).toHaveCount(60)
+  await expect(preview.locator('script')).toHaveCount(0)
+  await page.locator('iframe').evaluate((frame) => { frame.contentWindow.print = () => { frame.contentWindow.__printed = true } })
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await page.locator('iframe').evaluate((frame) => frame.contentWindow.__printed)).toBe(true)
+
+  // Standalone document fragment navigation requires no application handler.
+  // Keep the existing browser PDF engine; exercise A4 and Letter output.
+  const html = await page.locator('iframe').getAttribute('srcdoc')
+  for (const paper of ['A4', 'Letter']) {
+    await page.setContent(html.replace('size: A4;', `size: ${paper};`))
+    await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.images].map((img) => img.decode().catch(() => {}))) })
+    await page.locator('.notes-toc a').first().click()
+    expect(await page.locator('main h1').first().evaluate((node) => node.matches(':target'))).toBe(true)
+    await page.emulateMedia({ media: 'print' })
+    expect(await page.locator('main h1.notes-chapter').first().evaluate((node) => getComputedStyle(node).breakBefore)).toBe('page')
+    const pdf = await page.pdf({ path: testInfo.outputPath(`navigation-${paper}.pdf`), preferCSSPageSize: true, printBackground: true, displayHeaderFooter: false })
+    expect(pdf.subarray(0, 4).toString()).toBe('%PDF')
+    expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) || []).length).toBeGreaterThanOrEqual(60)
+    expect(pdf.toString('latin1')).toContain('/Subtype /Link')
+  }
 })
