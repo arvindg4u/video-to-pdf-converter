@@ -95,9 +95,9 @@ The pipeline is browser-only: `HTMLVideoElement → Canvas → JPEG → jsPDF`. 
 
 ## 📚 Markdown to PDF
 
-Switch to **Markdown to PDF** to turn a `.md` or `.markdown` file into an academic study-notes PDF. The existing video converter remains available in its own mode.
+Switch to **Markdown to PDF** to turn a `.md` or `.markdown` file into an academic study-notes PDF — including notes maintained in **Obsidian** (e.g. a continuously growing `Complete Notes.md`): choose the file directly, no copy/paste needed. The existing video converter remains available in its own mode.
 
-1. Upload or drag in **one UTF-8 Markdown file (up to 1 MB)**, paste Markdown into the editor, or choose **Try a sample**.
+1. Upload or drag in **one UTF-8 Markdown file (up to 5 MB)**, paste Markdown into the editor, or choose **Try a sample**. Extensions are case-insensitive (`.MD`, `.MARKDOWN` work), and Hindi + English mixed notes render correctly.
 2. Edit your notes and check the live, light-paper preview. Choose a document title and **A4** or **US Letter** paper.
 3. Click **Export PDF**. In your browser’s print dialog, select **Save as PDF**. Keep the selected paper size and disable browser headers/footers for a clean result. Enable background graphics if your browser does not preserve the theme’s shading by default.
 
@@ -110,10 +110,11 @@ PDF export uses the browser’s print engine rather than screenshots: text stays
 - Footnotes, heading anchors, and syntax highlighting for common code languages (unknown languages remain readable plain code).
 - Inline math with `$…$` and display math with `$$…$$`, rendered using bundled **KaTeX** fonts. Use fenced blocks for literal code. KaTeX supports a subset of LaTeX, not an entire LaTeX document.
 - Safe embedded HTML. Scripts, event handlers, iframes, unsafe URLs, and arbitrary styles are removed. Preview content is isolated in a sandboxed document.
+- **Obsidian files (Phase 1):** a leading YAML frontmatter block (`title`, `subject`, `tags`, …) is detected, kept as inert metadata (a frontmatter `title` becomes the document title), and never rendered as document content. Obsidian-only syntax — `[[Wikilinks]]`, `[[Page#Heading]]`, `![[embeds]]`, `#tags`, `^block-ids` — currently renders as the literal text you wrote; it is never silently dropped or corrupted. Wikilink resolution, callouts, embeds, and tag rendering are planned for later phases.
 
 The **Academic study notes** theme includes serif body text, navy section headings, warm blockquotes for key takeaways, shaded tables, highlighted code, generous print margins, and pagination rules. It stays print-friendly even when the application uses dark mode.
 
-**Images & privacy:** Notes are read locally and never uploaded. Images must use absolute HTTP(S) URLs or embedded PNG/JPEG/GIF/WebP base64 data URLs; relative paths to neighboring files cannot be resolved from a dropped Markdown file. Remote images contact their hosts and require network access (HTTPS is recommended). Unavailable images are reported at export. Mermaid diagrams, MDX, citation processors, and other nonstandard Markdown plugins are not supported.
+**Images & privacy:** Notes are read locally and never uploaded. Images must use absolute HTTP(S) URLs or embedded PNG/JPEG/GIF/WebP base64 data URLs; relative paths to neighboring files cannot be resolved from a dropped Markdown file. Choosing only a `.md` file also does **not** give the browser access to the rest of your Obsidian vault, so local attachments (`![[image.png]]`, relative image paths) remain unavailable — a folder/ZIP/vault import phase is planned to address this. Remote images contact their hosts and require network access (HTTPS is recommended). Unavailable images are reported at export. Mermaid diagrams, MDX, citation processors, and other nonstandard Markdown plugins are not supported.
 
 **Offline:** In a production build, visit both converter modes online first so their assets can be cached. Only previously used assets/fonts are available offline; external images are not cached by the app. The Vite development server is not an offline build.
 

@@ -39,12 +39,66 @@ test('rejects invalid, empty and oversized files without losing previous notes',
   await expect(page.getByRole('alert')).toContainText('Choose one Markdown file')
   await input.setInputFiles({ name: 'empty.md', mimeType: '', buffer: Buffer.from('  ') })
   await expect(page.getByRole('alert')).toContainText('empty')
-  await input.setInputFiles({ name: 'large.md', mimeType: '', buffer: Buffer.alloc(1024 * 1024 + 1, 'a') })
+  await input.setInputFiles({ name: 'large.md', mimeType: '', buffer: Buffer.alloc(5 * 1024 * 1024 + 1, 'a') })
   await expect(page.getByRole('alert')).toContainText('too large')
   await expect(page.getByLabel('Edit Markdown')).toContainText('Learning & memory')
+  // A realistic large exam-notes file just under the 5 MB cap is accepted.
+  const bigNotes = Buffer.concat([Buffer.from('# Big notes\n\n'), Buffer.from('A study line of exam notes.\n'.repeat(Math.floor((5 * 1024 * 1024 - 64) / 28)))])
+  await input.setInputFiles({ name: 'big-but-fine.md', mimeType: '', buffer: bigNotes })
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByLabel('Edit Markdown')).toContainText('Big notes', { timeout: 20000 })
   await input.setInputFiles({ name: 'NOTES.MARKDOWN', mimeType: '', buffer: Buffer.from('# New notes') })
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(page.frameLocator('iframe').getByRole('heading', { name: 'New notes' })).toBeVisible()
+})
+
+test('imports an Obsidian notes file: frontmatter set aside, syntax preserved, Hindi rendered', async ({ page }) => {
+  await openMarkdown(page)
+  const obsidian = [
+    '---',
+    'title: Indian Polity',
+    'subject: RAS',
+    'tags:',
+    '  - polity',
+    '  - संविधान',
+    '---',
+    '',
+    '# भारतीय संविधान (Indian Polity)',
+    '',
+    '**मौलिक अधिकार** — see [[Fundamental Rights]] and [[Page#Heading]].',
+    '',
+    '![[image.png]]',
+    '',
+    'Review #polity ^block-1',
+    '',
+  ].join('\n')
+  // Uppercase extension, mixed Hindi + English UTF-8 content.
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.MD', mimeType: '', buffer: Buffer.from(obsidian, 'utf8') })
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  const preview = page.frameLocator('iframe[title="Study notes preview"]')
+  await expect(preview.getByRole('heading', { name: 'भारतीय संविधान (Indian Polity)' })).toBeVisible()
+  await expect(preview.locator('body')).toContainText('मौलिक अधिकार')
+  // Frontmatter is metadata, never document content.
+  await expect(preview.locator('body')).not.toContainText('subject: RAS')
+  await expect(preview.locator('body')).not.toContainText('title: Indian Polity')
+  // Unsupported Obsidian syntax survives verbatim — not silently corrupted.
+  await expect(preview.locator('body')).toContainText('[[Fundamental Rights]]')
+  await expect(preview.locator('body')).toContainText('[[Page#Heading]]')
+  await expect(preview.locator('body')).toContainText('![[image.png]]')
+  await expect(preview.locator('body')).toContainText('#polity')
+  await expect(preview.locator('body')).toContainText('^block-1')
+  // Frontmatter title becomes the document title; file name is shown.
+  await expect(page.getByLabel('Document title')).toHaveValue('Indian Polity')
+  await expect(page.locator('.md-file-row')).toContainText('Complete Notes.MD')
+  await expect(page.locator('.md-editor-panel')).toContainText('YAML frontmatter detected')
+  // The existing PDF/print flow still works for imported files.
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  const frame = page.frames().find((candidate) => candidate.parentFrame())
+  await frame.evaluate(() => { window.print = () => { window.printRequested = true } })
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await frame.evaluate(() => window.printRequested)).toBe(true)
+  expect(await frame.evaluate(() => document.title)).toBe('Indian Polity')
 })
 
 test('accepts drag and drop and clears export eligibility when editor is empty', async ({ page }) => {

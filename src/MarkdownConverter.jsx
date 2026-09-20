@@ -3,9 +3,9 @@ import katexStyles from 'katex/dist/katex.min.css?inline'
 import academicStyles from './markdown/academic.css?inline'
 import sampleNotes from '../examples/academic-study-notes.md?raw'
 import { createNotesDocument, renderMarkdown } from './markdown/render'
+import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
+import { prepareMarkdown } from './markdown/obsidian'
 import './MarkdownConverter.css'
-
-const MAX_FILE_SIZE = 1024 * 1024
 const documentStyles = `${katexStyles}\n${academicStyles}`
 
 export default function MarkdownConverter({ onBusyChange }) {
@@ -22,6 +22,12 @@ export default function MarkdownConverter({ onBusyChange }) {
   const inputRef = useRef(null)
   const previewRef = useRef(null)
   const deferredSource = useDeferredValue(source)
+
+  // Phase-1 Obsidian boundary: separate frontmatter metadata (preserved for
+  // future phases, never rendered/executed) and report Obsidian-only syntax.
+  // renderMarkdown() strips the same frontmatter before rendering, so the
+  // editor can keep showing the user's original file verbatim.
+  const prepared = useMemo(() => prepareMarkdown(deferredSource), [deferredSource])
 
   const rendered = useMemo(() => {
     try {
@@ -66,26 +72,21 @@ export default function MarkdownConverter({ onBusyChange }) {
     if (busy) return
     setError('')
     setStatus('')
-    if (files.length !== 1 || !/\.(md|markdown)$/i.test(files[0]?.name || '')) {
-      setError('Choose one Markdown file (.md or .markdown).')
-      return
-    }
-    const file = files[0]
-    if (file.size > MAX_FILE_SIZE) {
-      setError('This file is too large. Choose a Markdown file up to 1 MB.')
-      return
-    }
     setReading(true)
     try {
-      const text = await file.text()
-      if (!text.trim()) throw new Error('This Markdown file is empty. Choose a file with some notes.')
-      if (text.includes('\0')) throw new Error('This does not look like a text file. Use a UTF-8 Markdown file.')
-      setSource(text)
-      setTitle(file.name.replace(/\.(md|markdown)$/i, ''))
-      setFileName(file.name)
-      setStatus(`Loaded ${file.name}. Your notes are ready to edit and preview.`)
-    } catch (err) {
-      setError(err.message || 'The file could not be read. Please try again.')
+      // Validation and reading live in markdown/fileImport.js so the same
+      // rules (extension, size, emptiness, UTF-8) are unit-tested.
+      const result = await readMarkdownFile(files)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setSource(result.text)
+      // Prefer the Obsidian frontmatter title; fall back to the file name.
+      // Metadata values are untrusted strings and are escaped downstream.
+      setTitle(result.title)
+      setFileName(files[0].name)
+      setStatus(`Loaded ${files[0].name}${result.frontmatter ? ' · frontmatter kept as metadata' : ''}. Your notes are ready to edit and preview.`)
     } finally {
       setReading(false)
     }
@@ -171,7 +172,7 @@ export default function MarkdownConverter({ onBusyChange }) {
               <span className="md-file-icon" aria-hidden="true">MD</span>
               <p>{reading ? 'Reading your notes…' : 'Drop your Markdown file here'}</p>
               <button type="button" className="secondary-btn" disabled={busy} onClick={() => inputRef.current?.click()}>Browse .md files</button>
-              <small>One .md or .markdown file · up to 1 MB · UTF-8</small>
+              <small>One .md or .markdown file · up to {MAX_FILE_SIZE_LABEL} · UTF-8 · works with Obsidian notes</small>
             </div>
             <div className="md-file-row">
               <span className="muted">{fileName || 'Or paste your notes below.'}</span>
@@ -200,11 +201,17 @@ export default function MarkdownConverter({ onBusyChange }) {
             <h3><label htmlFor="markdown-source">3. Edit Markdown</label></h3>
             <span className="muted">{source.length.toLocaleString()} characters</span>
           </div>
+          {prepared.frontmatter && (
+            <p className="md-help">
+              YAML frontmatter detected ({Object.keys(prepared.frontmatter).join(', ') || 'empty'}) — kept as metadata, not rendered.
+            </p>
+          )}
           <textarea id="markdown-source" value={source} maxLength={MAX_FILE_SIZE} spellCheck={false} disabled={busy}
             placeholder={'# Your study notes\n\nPaste Markdown here, upload a .md file, or try the sample.\n\n## Key concepts\n- **Important idea**\n- [ ] Review before the exam\n\n> A useful takeaway\n\nInline math: $E = mc^2$'}
             onChange={(event) => { setSource(event.target.value); setStatus(''); setError('') }} />
           <p className="md-help">Supports headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML, and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
-          <p className="md-help">Images need absolute HTTP(S) URLs or embedded PNG/JPEG/GIF/WebP data. Relative image paths are unavailable. Remote images are fetched from their hosts; scripts and unsafe HTML are removed. Diagram plugins such as Mermaid are not rendered.</p>
+          <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian-only syntax such as <code>[[Wikilinks]]</code>, <code>![[embeds]]</code>, <code>#tags</code>, and <code>^block-ids</code> currently appears as the literal text you wrote — it is never silently dropped or altered.</p>
+          <p className="md-help">Images need absolute HTTP(S) URLs or embedded PNG/JPEG/GIF/WebP data. A chosen .md file does not grant access to the rest of your Obsidian vault, so local attachments (<code>![[image.png]]</code>, relative paths) stay unavailable; vault/folder import is planned for a later phase. Remote images are fetched from their hosts; scripts and unsafe HTML are removed. Diagram plugins such as Mermaid are not rendered.</p>
         </section>
       </div>
 

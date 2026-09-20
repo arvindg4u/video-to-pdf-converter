@@ -9,6 +9,7 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
+import { splitFrontmatter } from './obsidian.js'
 
 // Sanitize untrusted HTML BEFORE KaTeX/highlighting add their trusted markup.
 const schema = {
@@ -76,7 +77,10 @@ const processor = unified()
   .use(rehypeStringify)
 
 export function renderMarkdown(source) {
-  return String(processor.processSync(source))
+  // Separate a leading YAML frontmatter block (Obsidian files) before
+  // parsing so metadata never renders as document content. Everything
+  // downstream still treats the input as untrusted and sanitizes it.
+  return String(processor.processSync(splitFrontmatter(source).content))
 }
 
 export function escapeHtml(value) {
