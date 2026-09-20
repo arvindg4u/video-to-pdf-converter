@@ -4,6 +4,95 @@
 
 Ek saath 20 videos ke frames ko ek single PDF mein merge karo!
 
+## ✨ Video Features
+
+- ✅ **Multiple Videos Support** - Up to 20 videos ek saath upload karo
+- ✅ **Single Merged PDF** - Sabhi videos ke frames ek PDF mein
+- ✅ **Deterministic Sampling** - Exact, predictable frame timestamps
+- ✅ **Standard Page Sizes** - A4 or US Letter, aspect preserved, no cropping
+- ✅ **Readable Frame Labels** - Filename + timestamp on a contrast bar (optional)
+- ✅ **Real Cancellation** - Stop long conversions anytime, queue kept
+- ✅ **Graceful Failures** - Corrupt files fail fast with the filename named
+- ✅ **PWA Support** - App ki tarah install karo
+- ✅ **Offline Support** - Ek baar load hone ke baad offline kaam karega
+- ✅ **Progress Tracking** - Real-time progress bar with stats
+- ✅ **Remove Videos** - Upload ke baad bhi videos remove kar sakte ho
+- ✅ **Duplicate Detection** - Same video dobara add nahi hota
+
+## 🎥 Video Converter
+
+### Supported format
+
+- **Container:** `.mp4` only (`video/mp4` MIME, or `.mp4` extension when the platform reports no MIME type).
+- **Recommended codec:** H.264 video. Whatever your browser can play, the converter can usually process — if a file does not play in your browser, conversion cannot work either.
+- Files that merely *look* like MP4 (renamed `.webm`, text files, random bytes) are rejected: first by MIME/extension validation, then by real browser decoding before any frame work begins.
+
+### Frame sampling (exact rule)
+
+For a video of `duration` seconds at `fps` frames per second:
+
+```
+timestamps = 0, 1/fps, 2/fps, … , (n−1)/fps
+n = floor(duration × fps)
+```
+
+- Timestamp `0` **is** included (the first frame).
+- Every timestamp is strictly **less than** `duration`: the converter never seeks at/past the end of the stream, so there is no duplicate final frame.
+- Each video contributes exactly `n` frames; multi-video totals are the plain sum — no off-by-one errors.
+- Very short but playable clips (`floor(duration × fps) === 0`, e.g. a 0.4 s video at 1 FPS) contribute **one** frame at `t=0` instead of erroring.
+- FPS above the source's temporal resolution still yields exact timestamps; some frames may look identical (the decoder holds the nearest frame), but the count stays predictable.
+- Unplayable durations (`NaN`, `Infinity`, `0`) fail fast with a named decode error.
+
+### Limits
+
+| Limit | Value | Why |
+|---|---|---|
+| Videos per conversion | 20 | Long-standing product limit |
+| Total frames | 1000 | Bounds tab memory + conversion time |
+| Duration per video | 30 minutes | Long files seek/decode unreliably in tabs |
+| File size | 2 GB | Practical tab-memory guard |
+| Source resolution | 3840×2160 (4K) | Larger sources are rejected before decoding |
+| Embedded frame size | 1920 px longest edge | 4K sources are downscaled for sane PDF sizes |
+| Metadata load budget | 15 s per video | Corrupt/unsupported files fail instead of hanging |
+| Seek budget | 10 s per seek | Stalled decoders fail instead of hanging forever |
+| FPS range | 1–6 | Higher values explode frame counts |
+
+Every limit error states the current value, the allowed value, and what to do (e.g. lower FPS, shorten the clip, convert in batches).
+
+### PDF output
+
+- Standard **A4** or **US Letter** pages (your choice; same concept as Markdown mode).
+- Page orientation follows each frame's aspect ratio (landscape ↔ portrait), so mixed clips all stay large.
+- Frames are **fitted, centered, never cropped, never stretched**.
+- Optional label bar (on by default): `filename.mp4 · 12.50s` in white on a semi-transparent dark strip — readable on bright and dark frames alike.
+- File names: `merged-videos-<timestamp>.pdf`.
+
+### Cancellation & reliability
+
+- **Cancel conversion** stops everything: metadata loads, seeks, rendering, and PDF writing. No partial PDF is ever downloaded, resources (video decoders, object URLs, canvas memory) are released, and your queue is left untouched so you can retry.
+- One corrupt video aborts the merged PDF with a **named** error (`"holiday.mp4" could not be read…`) — the app never gets stuck in a busy state.
+- Progress updates are throttled so the UI stays responsive, and always end at exactly 100%.
+
+### Architecture
+
+```
+App.jsx                      — mode/theme shell + conversion lifecycle state
+video/
+  VideoUploader.jsx          — file picker + drag & drop
+  VideoQueue.jsx             — deterministic queue + removal
+  FrameController.jsx        — FPS / paper / label settings
+  ConversionProgress.jsx     — accessible progress bar
+  constants.js               — limits & timeouts (with rationale)
+  errors.js                  — VideoError taxonomy + human messages
+  videoValidation.js         — MIME/extension/queue validation
+  videoSampling.js           — deterministic timestamp math
+  videoLoader.js             — metadata + seek helpers (timeout/abort/cleanup)
+  pdfWriter.js               — standard-page layout + label overlay
+  videoProcessing.js         — controller: plan (guards) → render (frames)
+```
+
+The pipeline is browser-only: `HTMLVideoElement → Canvas → JPEG → jsPDF`. `toDataURL()` is kept deliberately — it is the most compatible jsPDF input, and frames are embedded one-by-one (never accumulated) with references released immediately, so peak memory stays flat.
+
 ## 📚 Markdown to PDF
 
 Switch to **Markdown to PDF** to turn a `.md` or `.markdown` file into an academic study-notes PDF. The existing video converter remains available in its own mode.
@@ -33,25 +122,17 @@ A complete example is available at [`examples/academic-study-notes.md`](examples
 ### Tests
 
 ```bash
-npm test                    # Markdown rendering, sanitization, and service worker
+npm test                    # Unit tests: video engine, fixtures, Markdown, service worker
 npx playwright install chromium
 npm run test:e2e             # Fresh production build + Chromium browser checks
 npm run build               # Production build
 ```
 
-Use Node.js 20+ for the browser-test tooling. The browser suite builds the app and starts an isolated preview server on port 4173; keep that port free. It covers uploads, live editing, print requests, multi-page PDFs, image timeouts, mobile layout, and cached offline use.
+Use Node.js 20+ for the browser-test tooling. The browser suite builds the app and starts an isolated preview server on port 4173; keep that port free. It covers video uploads, drag/drop, validation, queue management, FPS, progress, real PDF downloads (header/page-count/page-size verification), cancellation, corrupt-file failures, limit guards, mobile layout, themes, Markdown uploads, live editing, print requests, multi-page PDFs, image timeouts, and cached offline use.
 
 For an existing Chromium installation, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when running the browser tests.
 
-## ✨ Video Features
-
-- ✅ **Multiple Videos Support** - Up to 20 videos ek saath upload karo
-- ✅ **Single Merged PDF** - Sabhi videos ke frames ek PDF mein
-- ✅ **PWA Support** - App ki tarah install karo
-- ✅ **Offline Support** - Ek baar load hone ke baad offline kaam karega
-- ✅ **Progress Tracking** - Real-time progress bar with stats
-- ✅ **Video Info** - Har frame pe video name aur timestamp
-- ✅ **Remove Videos** - Upload ke baad bhi videos remove kar sakte ho
+**E2E video fixtures:** no binary fixtures are committed. Tests encode small MP4s inside Chromium at runtime (WebCodecs VP9/AVC + a minimal MP4 muxer for exact durations, MP4 MediaRecorder as fallback) and verify each fixture by real decoding before use. The muxer's byte layout is additionally validated in Node (`tests/mp4-muxer.test.js`).
 
 ## 🚀 Setup Instructions
 
@@ -84,34 +165,16 @@ Browser mein `http://localhost:3000` kholo
 
 1. **Multiple videos select karo** (max 20)
 2. **FPS select karo** (1-6)
-3. **Videos list check karo** - unwanted videos remove kar sakte ho
-4. **"Merge & Generate PDF" click karo**
-5. **Progress dekho** - video-by-video aur frame-by-frame
-6. **PDF download karo** - sabhi videos ke frames ek PDF mein!
-
-## 🎯 Features Details
-
-### Multiple Videos
-- Maximum 20 videos ek saath
-- Total size limit: Browser memory dependent
-- Har video ka naam aur timestamp PDF mein show hoga
-
-### Progress Tracking
-- Current video number
-- Total frames vs processed frames
-- Percentage completion
-- Real-time progress bar
-
-### PWA Benefits
-- Desktop/mobile pe install karo
-- Offline kaam karega
-- Fast loading
-- Native app jaisa experience
+3. **Paper size chuno** (A4 / US Letter) aur labels on/off karo
+4. **Videos list check karo** - unwanted videos remove kar sakte ho
+5. **"Generate PDF" click karo** ( Cancel anytime with **Cancel conversion**)
+6. **Progress dekho** - video-by-video aur frame-by-frame
+7. **PDF download karo** - sabhi videos ke frames ek PDF mein!
 
 ## 🛠️ Tech Stack
 
 - **Frontend:** React + Vite
-- **Video Processing:** HTML5 Canvas API
+- **Video Processing:** HTML5 Video/Canvas APIs (no backend, no FFmpeg)
 - **Video PDF Generation:** jsPDF
 - **Markdown Rendering:** unified, remark, rehype, KaTeX, and highlight.js
 - **Markdown PDF Generation:** Native browser print engine
@@ -121,9 +184,19 @@ Browser mein `http://localhost:3000` kholo
 
 - **Chhoti videos se start karo** testing ke liye
 - **1-2 FPS kaafi hai** most cases mein
-- **Video order matter karta hai** - jo pehle select karoge wo pehle PDF mein aayega
+- **Video order matter karta hai** - queue order hi PDF order hai
 - **Remove button use karo** agar galti se koi video select ho gayi
-- **Progress bar dekho** kitna time lagega estimate karne ke liye
+- **Same video dobara add karne pe** duplicate skip ho jayega with a notice
+
+## 🌐 Browser Requirements & Known Limitations
+
+- **Chromium/Chrome/Edge (primary target):** full support — tested via Playwright, including offline PWA.
+- **Firefox:** expected to work (standard Video/Canvas APIs, `seeked`/`loadedmetadata`); not covered by automated browser tests in this repo.
+- **Safari:** expected to work for typical H.264 MP4s; `toDataURL` JPEG and iframe sandboxing are supported, but Safari-specific seek quirks and PWA install behavior are **not** verified here.
+- **Mobile Chromium:** layout is responsive and verified at 390 px; heavy conversions are memory-constrained on phones — prefer short clips and low FPS.
+- Very long videos, exotic codecs (HEVC/VP9-in-MP4 playback varies by browser), and DRM-protected files are outside the supported envelope and fail with explicit errors.
+- Non-Latin filenames in frame labels degrade gracefully (`?` placeholders) because PDFs use built-in Latin-1 fonts.
+- The service worker caches the app shell and production assets only — never your uploaded videos, and never remote Markdown images.
 
 ## 🔒 Privacy
 

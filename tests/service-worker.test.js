@@ -80,7 +80,7 @@ test('installation precaches the shell and production entry assets', async () =>
 
 test('activation removes only obsolete caches owned by this app', async () => {
   const deleted = []
-  const emit = worker({ keys: ['video-to-pdf-v1', 'video-to-pdf-v2', 'another-app'], onDelete: (key) => deleted.push(key) })
+  const emit = worker({ keys: ['video-to-pdf-v1', 'video-to-pdf-v2', 'video-to-pdf-v3', 'another-app'], onDelete: (key) => deleted.push(key) })
   await emit('activate')
-  assert.deepEqual(deleted, ['video-to-pdf-v1'])
+  assert.deepEqual(deleted, ['video-to-pdf-v1', 'video-to-pdf-v2'])
 })

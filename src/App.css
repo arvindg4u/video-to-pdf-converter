@@ -198,6 +198,65 @@ h2 {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 
+.cancel-btn {
+  margin-top: 1rem;
+  width: 100%;
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  padding: 0.85rem 1.5rem;
+  background: transparent;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: #ef4444;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.setting-row label {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.setting-row select {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 600;
+}
+
+.setting-check {
+  justify-content: flex-start;
+}
+
+.setting-check input[type='checkbox'] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.setting-check label {
+  font-size: 0.9rem;
+}
+
 .controls-panel label {
   display: block;
   color: var(--text-soft);

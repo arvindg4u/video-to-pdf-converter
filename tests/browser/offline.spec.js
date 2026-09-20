@@ -24,3 +24,22 @@ test('production Markdown assets and previously used math fonts survive an offli
   expect(fonts).toContain('KaTeX_Main')
   expect(fonts).toContain('KaTeX_Math')
 })
+
+test('video workspace shell loads and queues files while offline', async ({ page, context }) => {
+  await page.goto('/')
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller))
+  await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+
+  await context.setOffline(true)
+  await page.reload()
+  // Full conversion is not attempted offline (decoding works, but the point
+  // here is the cached shell); the workspace must simply be usable.
+  await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Generate PDF', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Browse Files' })).toBeVisible()
+  await page.getByLabel('Choose MP4 video files').setInputFiles([
+    { name: 'offline.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(2048, 7) },
+  ])
+  await expect(page.locator('.queue-item')).toHaveCount(1)
+})

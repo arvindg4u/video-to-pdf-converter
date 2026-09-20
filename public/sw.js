@@ -1,4 +1,8 @@
-const CACHE_NAME = 'video-to-pdf-v2'
+// v3: video-engine refactor changed the app shell + entry chunks. Old
+// `video-to-pdf-*` caches are deleted on activate (see below), so existing
+// installs pick up the new shell on next online visit. Bump this version
+// (and only this line) whenever a release must invalidate the shell.
+const CACHE_NAME = 'video-to-pdf-v3'
 const APP_SHELL = ['/', '/index.html', '/icon.svg', '/manifest.json']
 
 self.addEventListener('install', (event) => {
