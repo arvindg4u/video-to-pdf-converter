@@ -20,17 +20,9 @@
  *                         embeds (`![[image.png]]`), inline tags (`#tag`), and
  *                         block references (`^block-id`) outside code.
  *
- * Phase 1 deliberately renders unsupported Obsidian syntax as the literal
- * text the user wrote — it is never silently dropped, mangled, or turned
- * into broken links/images. Later phases plug transformations into
- * `prepareMarkdown` (Wikilink resolution, callouts, embeds, tag panels).
- *
- * KNOWN LIMITATION (deferred to a future vault/folder/ZIP import phase):
- * selecting only a `.md` file cannot give the browser access to the rest of
- * the Obsidian vault. Local attachments referenced by `![[image.png]]` or
- * relative paths therefore stay unavailable; `render.js` already downgrades
- * them to visible "[Image unavailable]" text. Nothing here pretends
- * otherwise.
+ * Phase 3 rendering lives in syntax.js; explicit local image ingestion and
+ * resolution live in assets.js. Detection here remains informational only.
+ * A Markdown file alone never grants access to neighboring vault assets.
  */
 
 /** Frontmatter blocks larger than this are treated as document content. */

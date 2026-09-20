@@ -143,18 +143,14 @@ test('malicious Markdown loaded through the import path stays inert after frontm
   assert.doesNotMatch(html, /<[a-zA-Z][^>]*\son\w+\s*=/i)
 })
 
-test('unsupported Obsidian syntax renders as literal text, never silently corrupted', () => {
+test('Obsidian syntax has readable Phase-3 rendering without invented URLs', () => {
   const html = renderMarkdown(OBSIDIAN_FILE)
-  // Wikilinks (including heading/alias forms) stay visible as written.
-  assert.match(html, /\[\[Fundamental Rights\]\]/)
-  assert.match(html, /\[\[Page#Heading\|alias\]\]/)
-  // Embeds do not become broken <img> tags; the text the user wrote survives.
-  assert.match(html, /!\[\[image\.png\]\]/)
+  assert.match(html, /<span>Fundamental Rights<\/span>/)
+  assert.match(html, /<span>alias<\/span>/)
+  assert.match(html, /Image unavailable: image\.png/)
   assert.doesNotMatch(html, /<img/)
-  // Inline tags and block references survive as plain text.
-  assert.match(html, /#polity/)
-  assert.match(html, /\^block-1/)
-  // Wikilinks must not turn into real anchors.
+  assert.match(html, /class="obsidian-tag">#polity/)
+  assert.match(html, /id="user-content-obsidian-block-block-1"/)
   assert.doesNotMatch(html, /<a /)
 })
 

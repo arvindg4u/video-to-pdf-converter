@@ -170,3 +170,9 @@ summary { font-weight: 700; color: var(--heading); }
   .notes-footer { break-inside: avoid; }
   .notes-header { margin-bottom: 18px; }
 }
+
+/* Inline Obsidian metadata: no navigation, badges, or decorative boxes. */
+.study-notes .obsidian-tag {
+  color: #59616b;
+  font-size: 0.92em;
+}

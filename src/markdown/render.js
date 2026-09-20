@@ -9,6 +9,7 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
+import { obsidianSyntax, resolveObsidianAnchors } from './syntax.js'
 import { splitFrontmatter } from './obsidian.js'
 import { CALLOUT_CLASS_PATTERN, remarkCallouts } from './callouts.js'
 
@@ -21,6 +22,7 @@ const schema = {
     // Callout structure built by remarkCallouts: fixed, allowlisted class
     // names only — user-written callout types never reach markup. `open` is
     // needed for expanded collapsible callouts (<details>).
+    span: [...(defaultSchema.attributes.span || []), ['className', 'obsidian-tag']],
     div: [['className', CALLOUT_CLASS_PATTERN]],
     details: [['className', CALLOUT_CLASS_PATTERN], 'open'],
     summary: [['className', CALLOUT_CLASS_PATTERN]],
@@ -71,25 +73,27 @@ function safeResources() {
   }
 }
 
-const processor = unified()
+const processor = (options) => unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkMath)
   .use(remarkCallouts)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
+  .use(obsidianSyntax, options)
   .use(rehypeSlug)
+  .use(resolveObsidianAnchors)
   .use(rehypeSanitize, schema)
   .use(safeResources)
   .use(rehypeKatex, { trust: false, strict: 'ignore', throwOnError: false })
   .use(rehypeHighlight, { detect: false, ignoreMissing: true })
   .use(rehypeStringify)
 
-export function renderMarkdown(source) {
+export function renderMarkdown(source, options = {}) {
   // Separate a leading YAML frontmatter block (Obsidian files) before
   // parsing so metadata never renders as document content. Everything
   // downstream still treats the input as untrusted and sanitizes it.
-  return String(processor.processSync(splitFrontmatter(source).content))
+  return String(processor(options).processSync(splitFrontmatter(source).content))
 }
 
 export function escapeHtml(value) {

@@ -309,3 +309,60 @@ test('rapid edits and paper changes export only the latest document', async ({ p
   expect(printed.text).not.toContain('Earlier revision')
   expect(printed.styles).toContain('size: Letter')
 })
+
+test('Obsidian syntax and explicitly selected assets survive preview and PDF export', async ({ page }) => {
+  await openMarkdown(page)
+  const markdown = '---\ntitle: Constitution\n---\n# Fundamental Rights\n\nभारतीय संविधान\n\n[[Indian Constitution|Constitution]] [[#Fundamental Rights|Read section]] [[#Missing]] [[#^fact|Fact]] [[#^absent]]\n\nImportant fact ^fact\n\n#polity #RAS/prelims\n\n> [!TIP] Review\n> Hindi + English\n\n![[image.png|500]]\n\n![Relative](image.png)\n\n![[missing.png]]\n\n![[../../secret.png]]\n\n[[https://evil.example|Not a URL]]\n\n<script>window.__pwned = true</script>'
+  await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'Complete Notes.md', mimeType: 'text/markdown', buffer: Buffer.from(markdown) })
+  const preview = page.frameLocator('iframe[title="Study notes preview"]')
+  await expect(preview.locator('main')).toContainText('Image unavailable: image.png')
+  await page.getByLabel('Add image files', { exact: true }).setInputFiles({
+    name: 'image.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'),
+  })
+  await expect(preview.locator('img')).toHaveCount(2)
+  await expect(preview.locator('img').first()).toHaveAttribute('width', '500')
+  await expect.poll(() => preview.locator('img').first().evaluate((img) => img.naturalWidth)).toBe(1)
+  await expect(preview.locator('.obsidian-tag')).toHaveCount(2)
+  await expect(preview.locator('.callout-tip')).toHaveCount(1)
+  await expect(preview.locator('main')).toContainText('भारतीय संविधान')
+  await expect(preview.locator('main')).toContainText('Constitution')
+  await expect(preview.getByRole('link', { name: 'Read section' })).toHaveAttribute('href', '#user-content-fundamental-rights')
+  await expect(preview.getByRole('link', { name: 'Fact', exact: true })).toHaveAttribute('href', '#user-content-obsidian-block-fact')
+  await expect(preview.locator('a')).toHaveCount(2)
+  await expect(preview.locator('main')).toContainText('Image unavailable: missing.png')
+  await expect(preview.locator('main')).toContainText('Image unavailable: ../../secret.png')
+  await expect(preview.locator('script, iframe')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  await page.locator('iframe[title="Study notes preview"]').evaluate((frame) => {
+    frame.contentWindow.print = () => { frame.contentWindow.__printed = true }
+  })
+  await page.getByRole('button', { name: 'Export PDF', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Print dialog requested')
+  expect(await page.locator('iframe[title="Study notes preview"]').evaluate((frame) => frame.contentWindow.__printed)).toBe(true)
+  await page.getByRole('button', { name: 'Clear local images' }).click()
+  await expect(preview.locator('img')).toHaveCount(0)
+})
+
+test('selected image folder preserves nested paths and rejects disguised image content', async ({ page }) => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const folder = await mkdtemp(join(tmpdir(), 'pdf-assets-'))
+  try {
+    await mkdir(join(folder, 'attachments'))
+    await writeFile(join(folder, 'attachments', 'image.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'))
+    await writeFile(join(folder, 'ignored.html'), '<script>alert(1)</script>')
+    await openMarkdown(page)
+    await page.getByLabel('Edit Markdown').fill('![Constitution](attachments/image.png)\n\n![[image.png]]')
+    await page.getByLabel('Add image folder', { exact: true }).setInputFiles(folder)
+    const preview = page.frameLocator('iframe[title="Study notes preview"]')
+    await expect(preview.locator('img')).toHaveCount(2)
+    await expect(page.getByRole('status')).toContainText('1 unsupported files ignored')
+    await page.getByLabel('Add image files', { exact: true }).setInputFiles({ name: 'attack.png', mimeType: 'image/png', buffer: Buffer.from('<script>alert(1)</script>') })
+    await expect(page.getByRole('alert')).toContainText('Invalid image content')
+    await expect(preview.locator('img')).toHaveCount(2) // failed imports are atomic
+    await page.getByRole('button', { name: 'Try a sample' }).click()
+    await expect(page.getByText('0 local images', { exact: false })).toBeVisible()
+  } finally { await rm(folder, { recursive: true, force: true }) }
+})

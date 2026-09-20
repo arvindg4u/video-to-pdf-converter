@@ -5,6 +5,7 @@ import sampleNotes from '../examples/academic-study-notes.md?raw'
 import { createNotesDocument, renderMarkdown } from './markdown/render'
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
 import { prepareMarkdown } from './markdown/obsidian'
+import { ingestAssets } from './markdown/assets'
 import './MarkdownConverter.css'
 const documentStyles = `${katexStyles}\n${studyStyles}`
 
@@ -12,6 +13,7 @@ export default function MarkdownConverter({ onBusyChange }) {
   const [source, setSource] = useState('')
   const [title, setTitle] = useState('Study notes')
   const [fileName, setFileName] = useState('')
+  const [assets, setAssets] = useState(null)
   const [paper, setPaper] = useState('A4')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -31,11 +33,11 @@ export default function MarkdownConverter({ onBusyChange }) {
 
   const rendered = useMemo(() => {
     try {
-      return { html: renderMarkdown(deferredSource), error: '' }
+      return { html: renderMarkdown(deferredSource, { assets }), error: '' }
     } catch {
       return { html: '', error: 'These notes could not be rendered. Check the Markdown and try again.' }
     }
-  }, [deferredSource])
+  }, [deferredSource, assets])
 
   const documentHtml = useMemo(() => createNotesDocument({
     html: rendered.html, title, paper, styles: documentStyles,
@@ -81,6 +83,7 @@ export default function MarkdownConverter({ onBusyChange }) {
         setError(result.error)
         return
       }
+      setAssets(null)
       setSource(result.text)
       // Prefer the Obsidian frontmatter title; fall back to the file name.
       // Metadata values are untrusted strings and are escaped downstream.
@@ -90,6 +93,20 @@ export default function MarkdownConverter({ onBusyChange }) {
     } finally {
       setReading(false)
     }
+  }
+
+  async function loadAssets(files, folder = false) {
+    if (busy || !files.length) return
+    setReading(true)
+    setError('')
+    setStatus('')
+    try {
+      const result = await ingestAssets(files, { folder })
+      setAssets(result.resolver)
+      setStatus(`Loaded ${result.resolver.size} images; ${result.skipped} unsupported files ignored. Asset selection replaces the previous image context.`)
+    } catch (err) {
+      setError(err.message || 'Unable to read the selected images.')
+    } finally { setReading(false) }
   }
 
   async function exportPdf() {
@@ -134,6 +151,7 @@ export default function MarkdownConverter({ onBusyChange }) {
   }
 
   function useSample() {
+    setAssets(null)
     setSource(sampleNotes)
     setTitle('Learning and memory')
     setFileName('academic-study-notes.md')
@@ -174,6 +192,17 @@ export default function MarkdownConverter({ onBusyChange }) {
               <button type="button" className="secondary-btn" disabled={busy} onClick={() => inputRef.current?.click()}>Browse .md files</button>
               <small>One .md or .markdown file · up to {MAX_FILE_SIZE_LABEL} · UTF-8 · works with Obsidian notes</small>
             </div>
+            <p className="md-help">Optional: add images after choosing your note. Select the folder that relative image paths start from (for <code>attachments/image.png</code>, choose the folder containing <code>attachments</code>). Only image files are read; notes in this folder are not imported.</p>
+            <label className="md-help">Add image folder
+              <input type="file" webkitdirectory="" multiple aria-label="Add image folder" disabled={busy}
+                onChange={(event) => { loadAssets(Array.from(event.target.files || []), true); event.target.value = '' }} />
+            </label>
+            <label className="md-help">Or select image files
+              <input type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif" aria-label="Add image files" disabled={busy}
+                onChange={(event) => { loadAssets(Array.from(event.target.files || [])); event.target.value = '' }} />
+            </label>
+            <p className="md-help">{assets?.size || 0} local images · 200 files max · 10 MB/image · 40 MB total. Selecting a new note or sample clears images.</p>
+            {assets && <button type="button" className="md-text-button" disabled={busy} onClick={() => setAssets(null)}>Clear local images</button>}
             <div className="md-file-row">
               <span className="muted">{fileName || 'Or paste your notes below.'}</span>
               <button type="button" className="md-text-button" disabled={busy} onClick={useSample}>Try a sample</button>
@@ -210,8 +239,8 @@ export default function MarkdownConverter({ onBusyChange }) {
             placeholder={'# Your study notes\n\nPaste Markdown here, upload a .md file, or try the sample.\n\n## Key concepts\n- **Important idea**\n- [ ] Review before the exam\n\n> A useful takeaway\n\nInline math: $E = mc^2$'}
             onChange={(event) => { setSource(event.target.value); setStatus(''); setError('') }} />
           <p className="md-help">Supports headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML, and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
-          <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian callouts (<code>&gt; [!NOTE]</code>, <code>&gt; [!IMPORTANT]</code>, <code>&gt; [!TIP]</code>, <code>&gt; [!WARNING]</code>, <code>&gt; [!CAUTION]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases like <code>[!INFO]</code>) render as calm study blocks; unknown types degrade gracefully. Remaining Obsidian-only syntax such as <code>[[Wikilinks]]</code>, <code>![[embeds]]</code>, <code>#tags</code>, and <code>^block-ids</code> currently appears as the literal text you wrote — it is never silently dropped or altered.</p>
-          <p className="md-help">Images need absolute HTTP(S) URLs or embedded PNG/JPEG/GIF/WebP data. A chosen .md file does not grant access to the rest of your Obsidian vault, so local attachments (<code>![[image.png]]</code>, relative paths) stay unavailable; vault/folder import is planned for a later phase. Remote images are fetched from their hosts; scripts and unsafe HTML are removed. Diagram plugins such as Mermaid are not rendered.</p>
+          <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian callouts (<code>&gt; [!NOTE]</code>, <code>&gt; [!IMPORTANT]</code>, <code>&gt; [!TIP]</code>, <code>&gt; [!WARNING]</code>, <code>&gt; [!CAUTION]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases like <code>[!INFO]</code>) render as calm study blocks; unknown types degrade gracefully. Wikilinks display readable labels; current-document heading and paragraph block links resolve when present. Tags render as subtle metadata. Image embeds resolve only from explicitly supplied assets; unavailable embeds show a placeholder.</p>
+          <p className="md-help">Local PNG/JPEG/GIF/WebP images require an explicit image selection; a .md file alone cannot access its vault. Relative Markdown images use exact paths within your selected asset root. Obsidian embeds may also use a unique filename. Ambiguous names are not guessed. Remote HTTP(S) images and raster data URLs remain supported; scripts and unsafe HTML are removed. Mermaid and embedded notes are not rendered.</p>
         </section>
       </div>
 
