@@ -1,3 +1,4 @@
+import { imageFact, resourceLabel } from './preflightFacts.js'
 /** Obsidian syntax is transformed on parsed text, never in code or math.
  * Generated links resolve against rehype-slug IDs before the existing sanitizer
  * adds its clobber prefix. This is not a second heading-anchor implementation.
@@ -10,6 +11,9 @@ const blocked = new Set(['code', 'pre', 'a', 'script', 'style', 'textarea', 'mat
 export function obsidianSyntax({ assets } = {}) {
   return (tree, file) => {
     const links = [], blocks = new Map()
+    const observations = { images: [], references: [], unsupportedEmbeds: [] }
+    const embedImages = new Set()
+    file.data.preflightResources = observations
     function visit(node) {
       if (blocked.has(node.tagName) || node.properties?.className?.some?.((c) => /^math-/.test(c))) return
       if (!node.children) return
@@ -62,17 +66,24 @@ export function obsidianSyntax({ assets } = {}) {
           const target = rawTarget.trim(), alias = aliasParts.join('|').trim()
           if (match[0].startsWith('!')) {
             const resource = assets?.resolve(target, { basename: true })
+            const isImage = /\.(png|jpe?g|webp|gif|svg|avif|bmp|tiff?|ico|heic|heif)$/i.test(target)
+            if (!isImage && !resource) observations.unsupportedEmbeds.push(target.startsWith('#') ? 'Current-note embed' : resourceLabel(target.split('#')[0]))
+            else observations.images.push(imageFact(target, resource, { embed: true, alt: alias || target }))
             const dimensions = /^(\d{1,4})(?:x(\d{1,4}))?$/.exec(alias)
             if (resource) {
               const props = { src: resource.src, alt: dimensions ? target : (alias || target) }
               // Width only: never stretch an image by imposing an aspect ratio.
               if (dimensions) props.width = Math.max(1, Math.min(2000, Number(dimensions[1])))
-              output.push(element('img', props, []))
+              const image = element('img', props, [])
+              embedImages.add(image)
+              output.push(image)
             } else output.push(text(`[Image unavailable: ${target}]`))
           } else {
             const label = alias || target.replace(/^#\^?/, '')
             const link = element('span', {}, [text(label)])
-            if (target.startsWith('#')) links.push({ node: link, target })
+            const reference = { kind: target.startsWith('#^') ? 'block' : target.startsWith('#') ? 'heading' : 'wikilink', label: resourceLabel(target.replace(/^#\^?/, '').split('#')[0]), resolved: false }
+            observations.references.push(reference)
+            if (target.startsWith('#')) links.push({ node: link, target, reference })
             output.push(link)
           }
         }
@@ -84,8 +95,9 @@ export function obsidianSyntax({ assets } = {}) {
     file.data.obsidian = { links, blocks }
     // Ordinary Markdown images use exact relative paths, never basename guesses.
     function images(node) {
-      if (node.tagName === 'img') {
+      if (node.tagName === 'img' && !embedImages.has(node)) {
         const resource = assets?.resolve(String(node.properties.src || ''))
+        observations.images.push(imageFact(node.properties.src, resource, node.properties))
         if (resource) node.properties.src = resource.src
       }
       node.children?.forEach(images)
@@ -115,11 +127,11 @@ export function resolveObsidianAnchors() {
       anchor.properties.id = id
       occupied.add(id)
     }
-    for (const { node, target } of file.data.obsidian?.links || []) {
+    for (const { node, target, reference } of file.data.obsidian?.links || []) {
       const value = target.slice(1)
       const id = value.startsWith('^') ? file.data.obsidian.blocks.get(value.slice(1))?.properties.id
         : headings.get(value.trim().toLocaleLowerCase()) || (ids.has(value) ? value : null)
-      if (id) { node.tagName = 'a'; node.properties.href = `#${id}` }
+      if (id) { reference.resolved = true; node.tagName = 'a'; node.properties.href = `#${id}` }
     }
   }
 }

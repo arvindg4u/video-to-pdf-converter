@@ -1,3 +1,5 @@
+import MarkdownPreflight from './MarkdownPreflight'
+import { analyzePreflight } from './markdown/preflight'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
 import studyStyles from './markdown/study.css?inline'
@@ -41,6 +43,11 @@ export default function MarkdownConverter({ onBusyChange }) {
       return { html: '', error: 'These notes could not be rendered. Check the Markdown and try again.' }
     }
   }, [deferredSource, assets])
+
+  const preflight = useMemo(() => ({
+    ...analyzePreflight(rendered.preflightFacts, { mode, paper, processingError: Boolean(rendered.error) }),
+    modeLabel: mode === 'revision' ? 'Revision' : 'Study', paperLabel: paper,
+  }), [rendered, mode, paper])
 
   const documentHtml = useMemo(() => createNotesDocument({
     ...rendered, title, fileName, paper, mode, styles: documentStyles,
@@ -115,7 +122,7 @@ export default function MarkdownConverter({ onBusyChange }) {
   }
 
   async function exportPdf() {
-    if (!previewReady || !source.trim() || rendered.error || busy) return
+    if (!previewReady || !source.trim() || rendered.error || preflight.errorCount || busy) return
     setExporting(true)
     setError('')
     setStatus('Preparing fonts and images…')
@@ -224,9 +231,10 @@ export default function MarkdownConverter({ onBusyChange }) {
             </select>
             <a className="md-preview-jump" href="#notes-preview">Jump to preview and output mode</a>
             <p className="md-help">Exam study theme: book-like serif typography tuned for long revision sessions and Hindi + English mixed notes, clear heading hierarchy, calm callouts, and print-safe tables. The PDF always uses a light page optimized for A4 (Letter also supported).</p>
-            <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error)}>
+            <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error) || preflight.errorCount > 0}>
               {exporting ? 'Preparing PDF…' : 'Export PDF'}
             </button>
+            <p className="md-help"><a href="#notes-preflight">Preflight</a>: {source !== deferredSource || reading ? 'updating…' : `${preflight.errorCount} errors · ${preflight.warningCount} warnings`}. Warnings do not block export.</p>
             <p className="md-help">Four or more H1–H3 headings add a linked Contents list. Frontmatter title takes precedence over the title field. Opens your browser’s print dialog. Choose <strong>Save as PDF</strong>, keep the selected paper size, and turn off browser headers/footers for a clean result. Chrome/Edge 131+ support our page numbers and a fixed document header when there is a single H1; other engines may omit them. Dynamic chapter headers are not supported; PDF title metadata depends on your browser.</p>
           </section>
         </div>
@@ -272,9 +280,10 @@ export default function MarkdownConverter({ onBusyChange }) {
             </div>
           </fieldset>
           <button type="button" className="secondary-btn" onClick={exportPdf}
-            disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error)}>Export preview PDF</button>
+            disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error) || preflight.errorCount > 0}>Export preview PDF</button>
         </div>
         <p id="notes-mode-help" className="md-help">Study: comfortable learning. Revision: compact review. Both use the same notes and standard paper size.</p>
+        <MarkdownPreflight result={preflight} pending={source !== deferredSource || reading} hasSource={Boolean(source.trim())} />
         {!source.trim() && <p className="md-empty">Your rendered study notes will appear here. Add a file, paste Markdown, or try the sample to begin.</p>}
         <iframe ref={previewRef} title="Study notes preview" className={`md-preview ${!source.trim() ? 'md-preview-empty' : ''}`}
           sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox"

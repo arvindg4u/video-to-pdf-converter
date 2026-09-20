@@ -1,3 +1,4 @@
+import { imageDimensions } from './imageMetadata.js'
 /** Explicit, bounded local image context. No network or filesystem access. */
 export const ASSET_LIMITS = { count: 200, perFile: 10 * 1024 * 1024, total: 40 * 1024 * 1024 }
 const types = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }
@@ -71,7 +72,7 @@ export async function ingestAssets(files, { folder = false } = {}) {
     if (file.size > ASSET_LIMITS.perFile || total > ASSET_LIMITS.total) throw new Error('Images exceed the 10 MB per-file or 40 MB total limit.')
     const bytes = new Uint8Array(await file.arrayBuffer())
     if (bytes.length !== file.size || !signature(bytes, mime)) throw new Error(`Invalid image content: ${path}`)
-    entries.push({ path, src: `data:${mime};base64,${base64(bytes)}` })
+    entries.push({ path, bytes: bytes.length, ...imageDimensions(bytes, mime), src: `data:${mime};base64,${base64(bytes)}` })
   }
   return { resolver: createAssetResolver(entries), skipped }
 }

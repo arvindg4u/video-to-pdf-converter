@@ -53,3 +53,12 @@
   .markdown-panel { padding: clamp(1rem, 3vw, 1.5rem); }
   #markdown-source { min-height: 320px; }
 }
+
+.md-preflight { padding: 0.85rem 1rem; border: 1px solid var(--border-soft); border-radius: 8px; color: var(--text-soft); font-size: 0.85rem; overflow-wrap: anywhere; }
+.md-preflight h4 { margin: 0 0 0.4rem; color: var(--text-main); }
+.md-preflight p { margin: 0.35rem 0; }
+.md-preflight summary { min-height: 44px; padding-block: 0.6rem; cursor: pointer; }
+.md-preflight ul { padding-left: 1.2rem; margin: 0.4rem 0; }
+.md-preflight li { margin-bottom: 0.7rem; }
+.md-preflight small { display: block; }
+.md-preflight[aria-busy="true"] .md-preflight-stats { opacity: 0.7; }

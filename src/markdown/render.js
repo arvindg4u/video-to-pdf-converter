@@ -1,3 +1,4 @@
+import { collectPreflightFacts, finishPreflightFacts } from './preflightFacts.js'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
@@ -86,9 +87,11 @@ const processor = (options) => unified()
   .use(resolveObsidianAnchors)
   .use(rehypeSanitize, schema)
   .use(safeResources)
+  .use(collectPreflightFacts)
   .use(rehypeKatex, { trust: false, strict: 'ignore', throwOnError: false })
   .use(rehypeHighlight, { detect: false, ignoreMissing: true })
   .use(studyNavigation)
+  .use(finishPreflightFacts)
   .use(rehypeStringify)
 
 /** Rich result for the app: one Markdown parse produces content + navigation. */
@@ -98,7 +101,8 @@ export function renderStudyMarkdown(source, options = {}) {
   const { headings, toc } = result.data.navigation
   // Stringify a small generated tree; this does not parse Markdown again.
   const tocHtml = toc ? unified().use(rehypeStringify).stringify(toc) : ''
-  return { html: String(result), tocHtml, headings, metadata: frontmatter }
+  const preflightFacts = { ...result.data.preflightFacts, characters: String(source ?? '').length, sourceBytes: new TextEncoder().encode(String(source ?? '')).length }
+  return { html: String(result), tocHtml, headings, metadata: frontmatter, preflightFacts }
 }
 
 export function renderMarkdown(source, options = {}) {

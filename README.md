@@ -180,6 +180,33 @@ Study retains the existing book-like baseline. Revision reduces spacing moderate
 
 Custom fonts/sizes/colors, user themes, search/bookmarks, nonstandard paper sizes, PDF-engine replacement, and all other excluded features remain deferred.
 
+### Document preflight (Phase 6)
+
+A compact **Preflight** panel beside the preview/export controls answers “Is there anything I should know before exporting?” It runs automatically for imports and deferred editor updates, and refreshes when assets change. While reading/editing is pending, previous results are explicitly marked as updating. Checks remain outside the printed document.
+
+Statistics include approximate prose words, source characters (JavaScript string length, including markup/frontmatter), all H1–H6 headings plus H1/H2/H3 counts, tables, image references (including unresolved ones), callouts, math expressions, code blocks, and checklist items. Words exclude code, math, generated footnotes, and frontmatter; visible fallback text may contribute. The **Estimated PDF: ~N pages** figure is only a coarse content-weight heuristic using words, media, tables, headings and the selected Study/Revision and A4/Letter profile—not measured browser pagination. Actual line wrapping, fonts, chapter breaks and images can change the result substantially.
+
+**Severity and export:**
+- **Info:** cross-note Wikilinks remain readable text because a single note does not contain its vault; remote image availability is unverified.
+- **Warning:** unresolved images/references, unsupported note/advanced embeds, heading structure issues, potentially difficult tables, large images, missing alt text, KaTeX failures, or a large document. Export is still available.
+- **Error:** the existing renderer failed to produce a document. Both export controls and the print handler remain disabled until it renders again. No new advisory threshold is a blocking limit. Existing file/asset ingestion limits and non-destructive import errors remain unchanged.
+
+Findings are grouped by check, with at most three example labels per group and a short recommendation. The warning count is the number of **warning groups**, not individual affected resources. Invalid or traversing paths are redacted, valid local paths show only the basename, and remote/data URLs are never printed into the report. React displays labels as escaped text.
+
+**Checks and current thresholds (strictly greater than unless noted):**
+- Heading checks: first heading below H1, upward depth jumps of more than one level, empty headings, and H5/H6 nesting. These are optional study-outline recommendations, not academic rules.
+- Tables: more than **7 columns**, cells longer than **500 characters**, or any empty header cell. Nothing is automatically shrunk or rewritten.
+- Images: unresolved/missing, unsupported formats, unsafe paths, and missing alt text. Supplied raster headers retain advisory dimensions/byte counts; warnings appear above **5 MiB**, **6,000 px on either side**, or **24 megapixels**. Unknown dimensions stay unknown; high-resolution images are not rejected by preflight. Existing ingestion caps still apply.
+- Size: source above **1 MiB** (well below the existing 5 MiB import cap), more than **300 headings**, **100 image references**, **200 math expressions**, or **25,000 rendered content-tree nodes**. These suggest smaller topic exports only if the browser struggles.
+- Math failures reuse **rehype-katex's existing diagnostic messages**, not a new formula parser. Unmatched delimiters that parse as ordinary text are not diagnosed as math failures.
+- Unsupported Obsidian note/advanced/block embeds reuse Phase-3 syntax recognition. Supported tags, callouts, wikilinks, heading links and block links are not mislabeled as unsupported. Preflight is not an exhaustive plugin/Obsidian validator.
+
+**Architecture and privacy:** `syntax.js` records existing resolution outcomes, `preflightFacts.js` extracts facts from the sanitized tree and existing KaTeX diagnostics, and the pure `analyzePreflight()` in `preflight.js` returns statistics/findings/estimates. There is no second Markdown parse. Mode/paper changes reuse the cached facts. `imageMetadata.js` reads bounded headers from already supplied bytes, never decodes/executes files or accesses the filesystem. Preflight performs **no fetches**. Remote-image reachability, corrupt raster decoding, and final pagination cannot be confirmed by this analysis; the existing preview/export resource-loading checks remain responsible for load failures. CSP, sanitizer, sandbox, KaTeX trust settings and asset validation are unchanged.
+
+**Validation:** unit tests cover statistics, threshold boundaries, resolution outcomes, heading/table/image/math checks, metadata/path security, determinism, and error-only export gating. The shared 123,571-character fixture contains 300 headings and 60 each of tables/images/callouts/math; its test records rendering/extraction and pure analysis separately, without a hardware-dependent speed promise. Playwright covers automatic import checks, editing/profile refresh, missing images/references, asset refresh, warning-tolerant export and existing rejected-file handling. **Chromium is absent in this sandbox, so browser assertions are unexecuted.** The exceptional renderer-failure state is covered by pure-analysis and export-gating unit tests, not an artificial production fault-injection UI.
+
+Deferred: network resource probes, exhaustive plugin diagnostics, exact PDF pagination, automatic repair/rewriting, landscape tables, a new PDF engine, and all other excluded features.
+
 ### Tests
 
 ```bash
