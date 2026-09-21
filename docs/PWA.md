@@ -12,8 +12,8 @@ Everything described here lives in:
 | --- | --- |
 | `public/manifest.json` | Web app manifest (identity, icons, colours). `id` is finalised at build time. |
 | `public/icons/` | Generated PNG/SVG icons referenced by the manifest and `index.html`. |
-| `branding/pdf-lab-icon.svg` | Design master for the icon (kept out of `public/` and the build). |
-| `scripts/render-icons.mjs` | Renders every icon size from the design master (`node scripts/render-icons.mjs`). |
+| `branding/pdf-lab-icon.png` | 1024 × 1024 design master for the icon (kept out of `public/` and the build). |
+| `scripts/render-icons.mjs`, `scripts/lib/png.js` | Pure-Node renderer: resamples the master into every icon size (`npm run icons`); shared PNG codec. |
 | `pwa/sw.template.js` | Service worker **source template**. Never deploy it as is. |
 | `pwa/precache.js` | Build-time inventory: content hashes, release version, worker rendering, manifest id. |
 | `pwa/vitePlugin.js` | Vite plugin that writes `dist/sw.js` and finalises `dist/manifest.json` on every production build. |
@@ -41,22 +41,22 @@ The implementation was checked against the current guidance on these pages
 ## Identity and icons
 
 - `name`: `PDF Lab — Video & Markdown to PDF`, `short_name`: `PDF Lab`, `lang: en`, `display: standalone`, no `orientation` member (phones and tablets may rotate freely; the layout is responsive).
-- `theme_color` / `background_color`: `#0f1f3d` (the icon's deep navy) so the splash screen and title bar match the icon. The page's `<meta name="theme-color">` follows the light/dark app theme at runtime (`src/pwa/themeColor.js`).
+- `theme_color` / `background_color`: `#0e2442` (the measured background colour of the icon master) so the splash screen and title bar match the icon exactly. The page's `<meta name="theme-color">` follows the light/dark app theme at runtime (`src/pwa/themeColor.js`).
 - `start_url` and `scope` are `./`, relative to the manifest, so a build with a different Vite `base` (see *Sub-directory hosting*) keeps working without editing the manifest.
 - `id` is rewritten at build time by the plugin: for an absolute base it becomes that base (`/` for the default root deployment, `/lab/` for `base: '/lab/'`); for a relative base (`./`) the member is omitted and browsers fall back to the resolved `start_url`. The previous manifest had no `id`, so browsers used the resolved `start_url` (`/`) — the new explicit `id: "/"` is the **same identity**, and existing installations update in place rather than becoming a second app.
-- Icons (all real PNGs rendered from `branding/pdf-lab-icon.svg`; the test `tests/pwa-icons.test.js` verifies dimensions, opacity, and that the manifest references them):
+- Icons (all real PNGs resampled from the single master `branding/pdf-lab-icon.png`; `tests/pwa-icons.test.js` re-renders them from the master and compares bytes, then verifies dimensions, opacity, safe zone, colours, and manifest references):
 
   | File | Size | Purpose |
   | --- | --- | --- |
   | `icons/icon-192.png`, `icons/icon-512.png` | 192², 512² | manifest `purpose: "any"` |
   | `icons/icon-512-maskable.png` | 512² | manifest `purpose: "maskable"`, artwork inside the centred safe circle (radius 40 % of width), opaque navy padding |
   | `icons/apple-touch-icon.png` | 180² | `<link rel="apple-touch-icon">` for iOS/iPadOS home screens |
-  | `icons/favicon-32.png`, `icons/favicon-16.png`, `icons/favicon.svg` | 32², 16², vector | browser tab icons |
+  | `icons/favicon-32.png`, `icons/favicon-16.png` | 32², 16² | browser tab icons (cropped in a little further so the play symbol still reads) |
 
   The artwork is a light folded document with an amber play symbol on an opaque deep-navy background — no lettering or emoji, so it stays legible at 16 px and under any mask shape. `"any"` and `"maskable"` are separate entries; the maskable file is not used as the regular icon (its extra padding would look small in launchers that do not mask).
 - The in-app header shows the same icon and name, and `index.html` carries matching `<title>`, `description`, `application-name`, `apple-mobile-web-app-title`, and icon links.
 
-To change the icon: edit `branding/pdf-lab-icon.svg`, run `node scripts/render-icons.mjs`, run `npm test`.
+The master itself is one generated image made from the design brief above (light folded document, amber play symbol, solid deep navy, no lettering); it was checked for a uniform opaque background and an artwork radius that fits the maskable safe zone after a 0.916× shrink. To change the icon: replace `branding/pdf-lab-icon.png` (square, solid background, artwork centred), run `npm run icons`, run `npm test`, and update the manifest colours if the background changed (the test reports the mismatch).
 
 ## Offline architecture
 
