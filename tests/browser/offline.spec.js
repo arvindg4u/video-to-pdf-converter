@@ -12,7 +12,7 @@ async function waitForOfflineReady(page) {
   expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 }
 
-test('critical: Markdown opened for the FIRST time offline renders the sample with bundled math fonts', async ({ page, context }) => {
+test('critical: Markdown opened for the FIRST time offline renders the sample with bundled math and handwriting fonts', async ({ page, context }) => {
   // Online: only the video workspace is visited. Markdown is never opened.
   await waitForOfflineReady(page)
   await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
@@ -41,6 +41,8 @@ test('critical: Markdown opened for the FIRST time offline renders the sample wi
   expect(fonts.failed).toEqual([])
   expect(fonts.loaded).toContain('KaTeX_Main')
   expect(fonts.loaded).toContain('KaTeX_Math')
+  // The default handwritten notes face (Latin + Devanagari) is precached too.
+  expect(fonts.loaded.filter((family) => family === 'Kalam').length).toBeGreaterThanOrEqual(2)
 })
 
 test('video workspace loads offline and still queues local files', async ({ page, context }) => {

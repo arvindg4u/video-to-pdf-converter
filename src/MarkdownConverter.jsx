@@ -4,16 +4,19 @@ import InfoTip from './ui/InfoTip.jsx'
 import { analyzePreflight } from './markdown/preflight'
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
+import fontStyles from './markdown/fonts.css?inline'
 import studyStyles from './markdown/study.css?inline'
 import profileStyles from './markdown/profiles.css?inline'
+import handwritingStyles from './markdown/handwriting.css?inline'
 import sampleNotes from '../examples/academic-study-notes.md?raw'
 import { createNotesDocument, renderStudyMarkdown } from './markdown/render'
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
 import { prepareMarkdown } from './markdown/obsidian'
 import { bindPreviewNavigation } from './markdown/navigation'
+import { NOTES_FONTS, readNotesFont, writeNotesFont } from './markdown/notesFont.js'
 import { ingestAssets } from './markdown/assets'
 import './MarkdownConverter.css'
-const documentStyles = `${katexStyles}\n${studyStyles}\n${profileStyles}`
+const documentStyles = `${katexStyles}\n${fontStyles}\n${studyStyles}\n${profileStyles}\n${handwritingStyles}`
 
 export default function MarkdownConverter({ onBusyChange }) {
   const [source, setSource] = useState('')
@@ -22,6 +25,7 @@ export default function MarkdownConverter({ onBusyChange }) {
   const [assets, setAssets] = useState(null)
   const [mode, setMode] = useState('study')
   const [paper, setPaper] = useState('A4')
+  const [font, setFont] = useState(() => readNotesFont())
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [reading, setReading] = useState(false)
@@ -64,8 +68,8 @@ export default function MarkdownConverter({ onBusyChange }) {
   }), [rendered, mode, paper])
 
   const documentHtml = useMemo(() => createNotesDocument({
-    ...rendered, title, fileName, paper, mode, styles: documentStyles,
-  }), [rendered, title, fileName, paper, mode])
+    ...rendered, title, fileName, paper, mode, font, styles: documentStyles,
+  }), [rendered, title, fileName, paper, mode, font])
 
   const previewSnapshot = useMemo(() => {
     const token = String(++previewSequence.current)
@@ -254,6 +258,7 @@ export default function MarkdownConverter({ onBusyChange }) {
               <h3>2. Output</h3>
               <InfoTip label="Exporting the PDF">
                 <p><strong>Export PDF</strong> opens your browser's print dialog: choose <em>Save as PDF</em>, keep the selected paper size and turn off browser headers/footers for a clean result.</p>
+                <p><strong>Notes font</strong>: <em>Handwritten</em> sets the notes in Kalam, a clear print-hand that covers Hindi (Devanagari) and English in one hand; emphasis becomes a highlighter mark. <em>Book</em> is the classic serif. Both are bundled and work offline; code and math keep their own faces.</p>
                 <p>Four or more H1–H3 headings add a linked Contents list. A frontmatter <code>title</code> takes precedence over the title field.</p>
                 <p>Chrome/Edge 131+ print page numbers and a fixed document header when there is a single H1; other engines may omit them. Preflight warnings never block export; only errors do.</p>
               </InfoTip>
@@ -263,6 +268,10 @@ export default function MarkdownConverter({ onBusyChange }) {
             <label htmlFor="notes-paper">Paper size</label>
             <select id="notes-paper" value={paper} disabled={busy} onChange={(event) => { markChanged(); setPaper(event.target.value) }}>
               <option value="A4">A4</option><option value="Letter">US Letter</option>
+            </select>
+            <label htmlFor="notes-font">Notes font</label>
+            <select id="notes-font" value={font} disabled={busy} onChange={(event) => { markChanged(); setFont(writeNotesFont(event.target.value)) }}>
+              {NOTES_FONTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <a className="md-preview-jump" href="#notes-preview">Go to preview</a>
             <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error) || preflight.errorCount > 0}>
@@ -309,7 +318,7 @@ export default function MarkdownConverter({ onBusyChange }) {
               <p>The preview reflows to the available width without shrinking the text; the print dialog shows the final page breaks, and text stays selectable in the PDF.</p>
             </InfoTip>
           </div>
-          <span className="muted">{paper} · {mode === 'revision' ? 'Revision' : 'Study'} · {previewReady ? 'Up to date' : 'Updating…'}</span>
+          <span className="muted">{paper} · {mode === 'revision' ? 'Revision' : 'Study'} · {font === 'hand' ? 'Handwritten' : 'Book'} · {previewReady ? 'Up to date' : 'Updating…'}</span>
         </div>
         <div className="md-preview-actions">
           <fieldset className="md-mode-switch" disabled={busy} aria-describedby="notes-mode-help">

@@ -150,7 +150,10 @@ test('renders the exam study theme: typography, callouts, tables, math, images, 
   await expect(page.getByLabel('Document title')).toHaveValue('Polity Complete Notes')
   const frame = page.frames().find((candidate) => candidate.parentFrame())
 
-  // Typography: Devanagari-capable local stack, ~11.5pt body, relaxed leading, white paper.
+  // Typography (book face; the default handwritten face is covered in fonts.spec.js):
+  // Devanagari-capable local stack, ~11.5pt body, relaxed leading, white paper.
+  await page.locator('#notes-font').selectOption('book')
+  await expect.poll(() => frame.locator('body').evaluate((element) => element.className)).toBe('study-mode')
   const typography = await frame.locator('body').evaluate((element) => {
     const styles = getComputedStyle(element)
     return { family: styles.fontFamily, size: parseFloat(styles.fontSize), lineHeight: parseFloat(styles.lineHeight) }

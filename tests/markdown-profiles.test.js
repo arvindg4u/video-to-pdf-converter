@@ -78,7 +78,7 @@ test('workspace wraps filenames and actions, stacks at tablet widths, and has to
 test('mode switching changes document composition, not Markdown parsing or source', () => {
   assert.match(component, /renderStudyMarkdown\(deferredSource, \{ assets \}\)/)
   assert.match(component, /\}, \[deferredSource, assets\]\)/)
-  assert.match(component, /\[rendered, title, fileName, paper, mode\]/)
+  assert.match(component, /\[rendered, title, fileName, paper, mode, font\]/)
   assert.match(component, /type="radio" name="notes-mode"/)
   assert.match(component, /<legend>Mode<\/legend>/)
   assert.match(component, /checked=\{mode === value\}/)

@@ -16,6 +16,7 @@ Ek saath 20 videos ke frames ko ek single PDF mein merge karo!
 - ✅ **PWA Support** - App ki tarah install karo (Chrome/Edge prompt, ya manual: Share → Add to Home Screen)
 - ✅ **Offline Support** - Production build poora app precache karta hai; status strip mein "Offline ready" dikhne ke baad video aur Markdown (math fonts ke saath) bina internet chalte hain — details [docs/PWA.md](docs/PWA.md)
 - ✅ **Progress Tracking** - Real-time progress bar with stats
+- ✅ **Handwritten notes font** - Study notes (preview + PDF) default to *Kalam*, a legible print-hand that covers Hindi (Devanagari) + English in one hand; emphasis becomes a highlighter mark; switch to the *Book* serif anytime (Output → Notes font). Bundled, offline, OFL — research and rationale in [docs/TYPOGRAPHY.md](docs/TYPOGRAPHY.md)
 - ✅ **Minimal UI** - Screen pe sirf labels, controls aur status; har hint/help ek chhote **i** button ke peeche (tap/click, Enter/Space; Escape se band; screen readers ke liye `dialog` role) — `src/ui/InfoTip.jsx`
 - ✅ **Study-friendly themes** - “Paper & Ink” light theme (warm paper, navy ink, amber highlighter) and “Night Desk” dark theme; WCAG 2.2 contrast checked by tests — see [docs/PALETTE.md](docs/PALETTE.md)
 - ✅ **Remove Videos** - Upload ke baad bhi videos remove kar sakte ho
@@ -136,7 +137,7 @@ Selection replaces the current image context; selecting a new note/sample clears
 **Deferred:** ZIP import (folder selection plus explicit files covers the current workflow), cross-note resolution, Markdown-note embeds, vault navigation/search, graph/backlinks, automatic note discovery, advanced block transclusion, Mermaid, Canvas, Dataview/plugins, TOC redesign, citations, and PDF-engine replacement.
 
 
-**Offline:** In a production build the service worker precaches the *whole* release during its first install — shell, all JS/CSS chunks including the lazily loaded Markdown converter, and the bundled KaTeX fonts — so the Markdown converter works offline even if it was never opened online. Wait for the status strip to read “Offline ready” before disconnecting (the release id and a plain-language explanation are behind the strip’s “i” button). External images referenced from notes are never cached, and neither are your notes, videos, or attachments. The Vite development server is not an offline build. See [docs/PWA.md](docs/PWA.md).
+**Offline:** In a production build the service worker precaches the *whole* release during its first install — shell, all JS/CSS chunks including the lazily loaded Markdown converter, and the bundled KaTeX and Kalam fonts — so the Markdown converter works offline even if it was never opened online. Wait for the status strip to read “Offline ready” before disconnecting (the release id and a plain-language explanation are behind the strip’s “i” button). External images referenced from notes are never cached, and neither are your notes, videos, or attachments. The Vite development server is not an offline build. See [docs/PWA.md](docs/PWA.md).
 
 A complete example is available at [`examples/academic-study-notes.md`](examples/academic-study-notes.md).
 
@@ -335,7 +336,7 @@ Full details (architecture, deployment headers, sub-directory hosting, release c
 - **Mobile Chromium:** layout is responsive and verified at 390 px; heavy conversions are memory-constrained on phones — prefer short clips and low FPS.
 - Very long videos, exotic codecs (HEVC/VP9-in-MP4 playback varies by browser), and DRM-protected files are outside the supported envelope and fail with explicit errors.
 - Non-Latin filenames in frame labels degrade gracefully (`?` placeholders) because PDFs use built-in Latin-1 fonts.
-- The service worker caches exactly the files of the shipped release (shell, scripts, styles, KaTeX fonts, manifest, icons) — never your uploaded videos or frames, Markdown notes, attached or remote images, or exported PDFs.
+- The service worker caches exactly the files of the shipped release (shell, scripts, styles, KaTeX and Kalam fonts, manifest, icons) — never your uploaded videos or frames, Markdown notes, attached or remote images, or exported PDFs.
 
 ## 🔒 Privacy
 

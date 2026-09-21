@@ -1,0 +1,52 @@
+/*
+ * "Handwritten" notes typography (body.font-hand), layered over the study
+ * theme and both output profiles. Same notes, same paper, same pagination
+ * rules — only the faces and their metrics change. Meta lines (running
+ * header/footer, subject) stay in the sans face so the page still has a
+ * calm printed frame around the handwritten body. Code stays monospaced and
+ * math stays in the KaTeX faces: a handwriting face would hurt both.
+ *
+ * Kalam has no italic, so browsers would synthesise a second slant on an
+ * already slanted hand. Emphasis is drawn as a highlighter stroke instead —
+ * the mark a student makes in a notebook — and bold stays bold.
+ */
+body.font-hand {
+  --font-body: 'Kalam', 'Noto Sans Devanagari', 'Kohinoor Devanagari', Mangal, 'Lohit Devanagari', 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
+  --font-hand-mark: #ffe9a3;
+  font-size: 12.5pt;
+  line-height: 1.7;
+  word-spacing: 0.04em;
+  font-variant-numeric: normal;
+}
+body.font-hand.revision-mode { font-size: 12pt; line-height: 1.58; }
+
+body.font-hand h1 { font-size: 18.5pt; letter-spacing: 0; }
+body.font-hand h2 { font-size: 14.5pt; }
+body.font-hand h3 { font-size: 13pt; }
+body.font-hand h4 { font-size: 12.5pt; }
+body.font-hand h5 { font-size: 12pt; }
+body.font-hand h6 { font-size: 11pt; letter-spacing: 0.4px; }
+
+body.font-hand em,
+body.font-hand i {
+  font-style: normal;
+  background: linear-gradient(180deg, transparent 56%, var(--font-hand-mark) 56%, var(--font-hand-mark) 94%, transparent 94%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+/* Nested emphasis inside code or math keeps its own conventions. */
+body.font-hand code em, body.font-hand .katex em { background: none; }
+
+body.font-hand table { font-size: 11.5pt; line-height: 1.5; }
+body.font-hand .notes-toc { font-size: 11.5pt; line-height: 1.55; }
+body.font-hand .footnotes { font-size: 10.5pt; }
+body.font-hand .callout-title { letter-spacing: 0; }
+body.font-hand blockquote { font-size: 12pt; }
+
+/* Print: the base theme resets body size for paper; keep the hand metrics. */
+@media print {
+  body.font-hand { font-size: 12.5pt; }
+  body.font-hand.revision-mode { font-size: 12pt; }
+}
