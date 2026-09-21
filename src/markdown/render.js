@@ -115,8 +115,10 @@ export function escapeHtml(value) {
   })[character])
 }
 
-export function createNotesDocument({ html, title, fileName, metadata, tocHtml = '', headings = [], paper = 'A4', mode = 'study', styles }) {
+export function createNotesDocument({ html, title, fileName, metadata, tocHtml = '', headings = [], paper = 'A4', mode = 'study', font = 'book', styles }) {
+  // Body classes are a closed set: unknown values fall back, never echo input.
   const modeClass = mode === 'revision' ? 'revision-mode' : 'study-mode'
+  const fontClass = font === 'hand' ? ' font-hand' : ''
   const documentMetadata = resolveDocumentMetadata({ metadata, title, fileName })
   const chapters = headings.filter((heading) => heading.level === 1)
   // A sole H1 can describe the whole document. With several chapters, a
@@ -137,7 +139,7 @@ export function createNotesDocument({ html, title, fileName, metadata, tocHtml =
   @top-center { content: "${cssContext}"; font: 8pt var(--font-body, serif); color: #5b6874; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 @page { size: ${pageSize}; margin: 16mm 16mm 18mm; }</style>
-</head><body class="${modeClass}"><article class="study-notes">
+</head><body class="${modeClass}${fontClass}"><article class="study-notes">
 <header class="notes-header"><span>Exam study notes</span><span>${escapeHtml(documentMetadata.title)}</span></header>
 <div class="notes-frontmatter"><p class="notes-document-title">${escapeHtml(documentMetadata.title)}</p>${documentMetadata.subject ? `<p class="notes-subject">${escapeHtml(documentMetadata.subject)}</p>` : ''}</div>
 ${tocHtml}

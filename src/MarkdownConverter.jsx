@@ -1,18 +1,22 @@
 import { printNotes } from './markdown/printExport'
 import MarkdownPreflight from './MarkdownPreflight'
+import InfoTip from './ui/InfoTip.jsx'
 import { analyzePreflight } from './markdown/preflight'
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import katexStyles from 'katex/dist/katex.min.css?inline'
+import fontStyles from './markdown/fonts.css?inline'
 import studyStyles from './markdown/study.css?inline'
 import profileStyles from './markdown/profiles.css?inline'
+import handwritingStyles from './markdown/handwriting.css?inline'
 import sampleNotes from '../examples/academic-study-notes.md?raw'
 import { createNotesDocument, renderStudyMarkdown } from './markdown/render'
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, readMarkdownFile } from './markdown/fileImport'
 import { prepareMarkdown } from './markdown/obsidian'
 import { bindPreviewNavigation } from './markdown/navigation'
+import { NOTES_FONTS, readNotesFont, writeNotesFont } from './markdown/notesFont.js'
 import { ingestAssets } from './markdown/assets'
 import './MarkdownConverter.css'
-const documentStyles = `${katexStyles}\n${studyStyles}\n${profileStyles}`
+const documentStyles = `${katexStyles}\n${fontStyles}\n${studyStyles}\n${profileStyles}\n${handwritingStyles}`
 
 export default function MarkdownConverter({ onBusyChange }) {
   const [source, setSource] = useState('')
@@ -21,6 +25,7 @@ export default function MarkdownConverter({ onBusyChange }) {
   const [assets, setAssets] = useState(null)
   const [mode, setMode] = useState('study')
   const [paper, setPaper] = useState('A4')
+  const [font, setFont] = useState(() => readNotesFont())
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [reading, setReading] = useState(false)
@@ -63,8 +68,8 @@ export default function MarkdownConverter({ onBusyChange }) {
   }), [rendered, mode, paper])
 
   const documentHtml = useMemo(() => createNotesDocument({
-    ...rendered, title, fileName, paper, mode, styles: documentStyles,
-  }), [rendered, title, fileName, paper, mode])
+    ...rendered, title, fileName, paper, mode, font, styles: documentStyles,
+  }), [rendered, title, fileName, paper, mode, font])
 
   const previewSnapshot = useMemo(() => {
     const token = String(++previewSequence.current)
@@ -189,18 +194,27 @@ export default function MarkdownConverter({ onBusyChange }) {
   return (
     <section className="markdown-workspace" aria-label="Markdown to PDF converter">
       <div className="markdown-intro">
-        <div>
-          <p className="meta">Read. Recall. Retain.</p>
-          <h2>Turn Markdown into study-ready notes</h2>
-          <p className="muted">Beautifully typeset notes, equations, and code. All conversion stays in your browser.</p>
+        <div className="panel-title">
+          <h2>Markdown notes</h2>
+          <InfoTip label="Markdown to PDF">
+            <p>Typesets your notes as an <strong>exam study document</strong>: book-like serif text tuned for long revision sessions and Hindi + English mixed notes, a clear heading hierarchy, calm callouts and print-safe tables. The PDF always uses a light page (A4 or US Letter), whatever the app theme.</p>
+            <p>Rendering and export happen entirely in your browser; notes are never uploaded.</p>
+          </InfoTip>
         </div>
-        <span className="academic-badge">Exam study notes</span>
       </div>
 
       <div className="markdown-layout">
         <div className="markdown-sidebar">
           <section className="panel markdown-panel">
-            <h3>1. Add your notes</h3>
+            <div className="panel-title">
+              <h3>1. Add your notes</h3>
+              <InfoTip label="Notes and images">
+                <p>One <strong>.md</strong> or <strong>.markdown</strong> file up to {MAX_FILE_SIZE_LABEL}, UTF-8. Obsidian notes work: frontmatter is kept as metadata, callouts, wikilinks and tags render as study blocks.</p>
+                <h4>Local images</h4>
+                <p>A .md file alone cannot reach its vault, so add images explicitly: pick the folder that relative image paths start from (for <code>attachments/image.png</code>, the folder containing <code>attachments</code>) or select image files. Only PNG, JPEG, GIF and WebP files are read — notes in that folder are not imported.</p>
+                <p>Limits: 200 files, 10 MB per image, 40 MB in total. Choosing a new note or the sample clears the images. Remote HTTP(S) images still load from the internet.</p>
+              </InfoTip>
+            </div>
             <input ref={inputRef} className="md-file-input" type="file" accept=".md,.markdown,text/markdown" aria-label="Upload Markdown file" disabled={busy}
               onChange={(event) => {
                 loadFile(Array.from(event.target.files || []))
@@ -215,61 +229,80 @@ export default function MarkdownConverter({ onBusyChange }) {
                 loadFile(Array.from(event.dataTransfer.files || []))
               }}>
               <span className="md-file-icon" aria-hidden="true">MD</span>
-              <p>{reading ? 'Reading your notes…' : 'Drop your Markdown file here'}</p>
+              <p>{reading ? 'Reading your notes…' : 'Drop a Markdown file'}</p>
               <button type="button" className="secondary-btn" disabled={busy} onClick={() => inputRef.current?.click()}>Browse .md files</button>
-              <small>One .md or .markdown file · up to {MAX_FILE_SIZE_LABEL} · UTF-8 · works with Obsidian notes</small>
             </div>
-            <p className="md-help">Optional: add images after choosing your note. Select the folder that relative image paths start from (for <code>attachments/image.png</code>, choose the folder containing <code>attachments</code>). Only image files are read; notes in this folder are not imported.</p>
-            <label className="md-help">Add image folder
-              <input type="file" webkitdirectory="" multiple aria-label="Add image folder" disabled={busy}
-                onChange={(event) => { loadAssets(Array.from(event.target.files || []), true); event.target.value = '' }} />
-            </label>
-            <label className="md-help">Or select image files
-              <input type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif" aria-label="Add image files" disabled={busy}
-                onChange={(event) => { loadAssets(Array.from(event.target.files || [])); event.target.value = '' }} />
-            </label>
-            <p className="md-help">{assets?.size || 0} local images · 200 files max · 10 MB/image · 40 MB total. Selecting a new note or sample clears images.</p>
-            {assets && <button type="button" className="md-text-button" disabled={busy} onClick={() => { markChanged(); setAssets(null) }}>Clear local images</button>}
+            <div className="md-assets">
+              <label className="md-help">Image folder
+                <input type="file" webkitdirectory="" multiple aria-label="Add image folder" disabled={busy}
+                  onChange={(event) => { loadAssets(Array.from(event.target.files || []), true); event.target.value = '' }} />
+              </label>
+              <label className="md-help">Image files
+                <input type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif" aria-label="Add image files" disabled={busy}
+                  onChange={(event) => { loadAssets(Array.from(event.target.files || [])); event.target.value = '' }} />
+              </label>
+            </div>
+            {assets && (
+              <p className="md-help md-assets-count">{assets.size} local {assets.size === 1 ? 'image' : 'images'} ·{' '}
+                <button type="button" className="md-text-button" disabled={busy} onClick={() => { markChanged(); setAssets(null) }}>Clear local images</button>
+              </p>
+            )}
             <div className="md-file-row">
-              <span className="muted md-file-name">{fileName || 'Or paste your notes below.'}</span>
+              <span className="muted md-file-name">{fileName || 'No file — paste notes below'}</span>
               <button type="button" className="md-text-button" disabled={busy} onClick={useSample}>Try a sample</button>
             </div>
           </section>
 
           <section className="panel markdown-panel md-settings">
-            <h3>2. Make it yours</h3>
+            <div className="panel-title">
+              <h3>2. Output</h3>
+              <InfoTip label="Exporting the PDF">
+                <p><strong>Export PDF</strong> opens your browser's print dialog: choose <em>Save as PDF</em>, keep the selected paper size and turn off browser headers/footers for a clean result.</p>
+                <p><strong>Notes font</strong>: <em>Handwritten</em> sets the notes in Kalam, a clear print-hand that covers Hindi (Devanagari) and English in one hand; emphasis becomes a highlighter mark. <em>Book</em> is the classic serif. Both are bundled and work offline; code and math keep their own faces.</p>
+                <p>Four or more H1–H3 headings add a linked Contents list. A frontmatter <code>title</code> takes precedence over the title field.</p>
+                <p>Chrome/Edge 131+ print page numbers and a fixed document header when there is a single H1; other engines may omit them. Preflight warnings never block export; only errors do.</p>
+              </InfoTip>
+            </div>
             <label htmlFor="notes-title">Document title</label>
             <input id="notes-title" value={title} maxLength={150} disabled={busy} onChange={(event) => { markChanged(); setTitle(event.target.value) }} />
             <label htmlFor="notes-paper">Paper size</label>
             <select id="notes-paper" value={paper} disabled={busy} onChange={(event) => { markChanged(); setPaper(event.target.value) }}>
               <option value="A4">A4</option><option value="Letter">US Letter</option>
             </select>
-            <a className="md-preview-jump" href="#notes-preview">Jump to preview and output mode</a>
-            <p className="md-help">Exam study theme: book-like serif typography tuned for long revision sessions and Hindi + English mixed notes, clear heading hierarchy, calm callouts, and print-safe tables. The PDF always uses a light page optimized for A4 (Letter also supported).</p>
+            <label htmlFor="notes-font">Notes font</label>
+            <select id="notes-font" value={font} disabled={busy} onChange={(event) => { markChanged(); setFont(writeNotesFont(event.target.value)) }}>
+              {NOTES_FONTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <a className="md-preview-jump" href="#notes-preview">Go to preview</a>
             <button type="button" className="primary-btn" onClick={exportPdf} disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error) || preflight.errorCount > 0}>
               {exporting ? 'Preparing PDF…' : 'Export PDF'}
             </button>
-            <p className="md-help"><a href="#notes-preflight">Preflight</a>: {source !== deferredSource || reading ? 'updating…' : `${preflight.errorCount} errors · ${preflight.warningCount} warnings`}. Warnings do not block export.</p>
-            <p className="md-help">Four or more H1–H3 headings add a linked Contents list. Frontmatter title takes precedence over the title field. Opens your browser’s print dialog. Choose <strong>Save as PDF</strong>, keep the selected paper size, and turn off browser headers/footers for a clean result. Chrome/Edge 131+ support our page numbers and a fixed document header when there is a single H1; other engines may omit them. Dynamic chapter headers are not supported; PDF title metadata depends on your browser.</p>
+            <p className="md-help"><a href="#notes-preflight">Preflight</a>: {source !== deferredSource || reading ? 'updating…' : `${preflight.errorCount} errors · ${preflight.warningCount} warnings`}</p>
           </section>
         </div>
 
         <section className="panel markdown-panel md-editor-panel">
           <div className="md-section-heading">
-            <h3><label htmlFor="markdown-source">3. Edit Markdown</label></h3>
+            <div className="panel-title">
+              <h3><label htmlFor="markdown-source">3. Edit Markdown</label></h3>
+              <InfoTip label="Supported Markdown">
+                <p>Headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
+                <h4>Obsidian</h4>
+                <p>YAML frontmatter is kept as metadata and left out of the notes (its <code>title</code> becomes the document title). Callouts (<code>&gt; [!NOTE]</code>, <code>[!TIP]</code>, <code>[!WARNING]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases such as <code>[!INFO]</code>) render as calm study blocks. Wikilinks show readable labels; heading and block links inside the document resolve when present. Tags render as subtle metadata.</p>
+                <h4>Images</h4>
+                <p>Relative image paths and Obsidian embeds resolve only from the images you added (exact paths, or a unique filename). Remote HTTP(S) images and raster data URLs work; scripts and unsafe HTML are removed. Mermaid and embedded notes are not rendered.</p>
+              </InfoTip>
+            </div>
             <span className="muted">{source.length.toLocaleString()} characters</span>
           </div>
           {prepared.frontmatter && (
             <p className="md-help">
-              YAML frontmatter detected ({Object.keys(prepared.frontmatter).join(', ') || 'empty'}) — kept as metadata, not rendered.
+              YAML frontmatter detected ({Object.keys(prepared.frontmatter).join(', ') || 'empty'}) — kept as metadata.
             </p>
           )}
           <textarea id="markdown-source" value={source} maxLength={MAX_FILE_SIZE} spellCheck={false} disabled={busy}
             placeholder={'# Your study notes\n\nPaste Markdown here, upload a .md file, or try the sample.\n\n## Key concepts\n- **Important idea**\n- [ ] Review before the exam\n\n> A useful takeaway\n\nInline math: $E = mc^2$'}
             onChange={(event) => { markChanged(); setSource(event.target.value); setStatus(''); setError('') }} />
-          <p className="md-help">Supports headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML, and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
-          <p className="md-help">Obsidian files welcome: a YAML frontmatter block (<code>title</code>, <code>tags</code>, …) is detected, kept as metadata, and left out of the rendered notes; a frontmatter <code>title</code> becomes the document title. Obsidian callouts (<code>&gt; [!NOTE]</code>, <code>&gt; [!IMPORTANT]</code>, <code>&gt; [!TIP]</code>, <code>&gt; [!WARNING]</code>, <code>&gt; [!CAUTION]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases like <code>[!INFO]</code>) render as calm study blocks; unknown types degrade gracefully. Wikilinks display readable labels; current-document heading and paragraph block links resolve when present. Tags render as subtle metadata. Image embeds resolve only from explicitly supplied assets; unavailable embeds show a placeholder.</p>
-          <p className="md-help">Local PNG/JPEG/GIF/WebP images require an explicit image selection; a .md file alone cannot access its vault. Relative Markdown images use exact paths within your selected asset root. Obsidian embeds may also use a unique filename. Ambiguous names are not guessed. Remote HTTP(S) images and raster data URLs remain supported; scripts and unsafe HTML are removed. Mermaid and embedded notes are not rendered.</p>
         </section>
       </div>
 
@@ -278,12 +311,18 @@ export default function MarkdownConverter({ onBusyChange }) {
 
       <section id="notes-preview" className="panel markdown-panel md-preview-panel">
         <div className="md-section-heading">
-          <h3>Document preview</h3>
-          <span className="muted">{paper} · {mode === 'revision' ? 'Revision' : 'Study'} mode · {previewReady ? 'Up to date' : 'Updating…'}</span>
+          <div className="panel-title">
+            <h3>Preview</h3>
+            <InfoTip label="Preview and output modes">
+              <p><strong>Study</strong> is the comfortable learning layout; <strong>Revision</strong> is a compact review layout. Both use the same notes and paper size.</p>
+              <p>The preview reflows to the available width without shrinking the text; the print dialog shows the final page breaks, and text stays selectable in the PDF.</p>
+            </InfoTip>
+          </div>
+          <span className="muted">{paper} · {mode === 'revision' ? 'Revision' : 'Study'} · {font === 'hand' ? 'Handwritten' : 'Book'} · {previewReady ? 'Up to date' : 'Updating…'}</span>
         </div>
         <div className="md-preview-actions">
           <fieldset className="md-mode-switch" disabled={busy} aria-describedby="notes-mode-help">
-            <legend>Output mode</legend>
+            <legend>Mode</legend>
             <div>
               {['study', 'revision'].map((value) => (
                 <label key={value}>
@@ -297,13 +336,12 @@ export default function MarkdownConverter({ onBusyChange }) {
           <button type="button" className="secondary-btn" onClick={exportPdf}
             disabled={busy || !source.trim() || !previewReady || Boolean(rendered.error) || preflight.errorCount > 0}>Export preview PDF</button>
         </div>
-        <p id="notes-mode-help" className="md-help">Study: comfortable learning. Revision: compact review. Both use the same notes and standard paper size.</p>
+        <p id="notes-mode-help" className="sr-only">Study: comfortable learning. Revision: compact review. Both use the same notes and paper size.</p>
         <MarkdownPreflight result={preflight} pending={source !== deferredSource || reading} hasSource={Boolean(source.trim())} />
-        {!source.trim() && <p className="md-empty">Your rendered study notes will appear here. Add a file, paste Markdown, or try the sample to begin.</p>}
+        {!source.trim() && <p className="md-empty">The preview appears here once you add notes.</p>}
         <iframe ref={previewRef} title="Study notes preview" className={`md-preview ${!source.trim() ? 'md-preview-empty' : ''}`}
           sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox"
           />
-        <p className="md-help">The preview reflows to the available width without shrinking the text. The print dialog shows final page breaks; text remains selectable in the PDF.</p>
       </section>
     </section>
   )

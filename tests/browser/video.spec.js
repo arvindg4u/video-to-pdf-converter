@@ -12,7 +12,7 @@ import {
 async function openVideo(page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Video to PDF', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
 }
 
 async function downloadPdf(page, clickGenerate = true) {

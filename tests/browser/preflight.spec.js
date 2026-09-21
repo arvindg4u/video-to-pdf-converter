@@ -21,7 +21,7 @@ test('preflight automatically reports normal imported notes and follows edits an
   await expect(panel).toContainText('Estimated PDF: ~')
   const stats = await panel.locator('.md-preflight-stats').innerText()
   await page.getByRole('radio', { name: 'Revision', exact: true }).check()
-  await expect(panel).toContainText('Revision / A4 content estimate, not pagination')
+  await expect(panel).toContainText('Revision / A4')
   expect(await panel.locator('.md-preflight-stats').innerText()).toBe(stats)
   await page.locator('#notes-paper').selectOption('Letter')
   await expect(panel).toContainText('Revision / Letter')

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import InfoTip from '../ui/InfoTip.jsx'
 import { MAX_VIDEOS } from './constants.js'
 import { ACCEPTED_VIDEO_EXTENSION, ACCEPTED_VIDEO_MIME } from './videoValidation.js'
 
@@ -29,7 +30,13 @@ export default function VideoUploader({ disabled, onFiles }) {
         if (!disabled) onFiles(Array.from(event.dataTransfer?.files || []))
       }}
     >
-      <h2>Upload Matrix</h2>
+      <div className="panel-title">
+        <h2>Upload</h2>
+        <InfoTip label="Uploading videos">
+          <p>Up to <strong>{MAX_VIDEOS} .mp4 files</strong>, dropped here or chosen with <em>Browse Files</em>. The same file is never queued twice.</p>
+          <p>Videos are read locally by your browser and never uploaded anywhere.</p>
+        </InfoTip>
+      </div>
       <input
         ref={inputRef}
         id="video-upload"
@@ -46,7 +53,7 @@ export default function VideoUploader({ disabled, onFiles }) {
         aria-label="Choose MP4 video files"
       />
       <div className={`drop-zone ${dragActive ? 'active' : ''}`}>
-        <p>{dragActive ? 'Drop now 🔥' : 'Drag & Drop .mp4 videos'}</p>
+        <p>{dragActive ? 'Drop now' : 'Drop .mp4 videos'}</p>
         <button
           type="button"
           className="secondary-btn"
@@ -55,7 +62,6 @@ export default function VideoUploader({ disabled, onFiles }) {
         >
           Browse Files
         </button>
-        <small>max {MAX_VIDEOS} files · .mp4 only</small>
       </div>
     </section>
   )

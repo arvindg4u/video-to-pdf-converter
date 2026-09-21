@@ -10,6 +10,9 @@ async function openNotes(page) {
   const name = `Complete_Notes_${'Chapter_'.repeat(20)}.md`
   await page.getByLabel('Upload Markdown file').setInputFiles({ name, mimeType: 'text/markdown', buffer: Buffer.from(source) })
   await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
+  // Profile metrics below are defined on the book face; the handwritten layer
+  // (default) has its own metrics, covered in fonts.spec.js.
+  await page.locator('#notes-font').selectOption('book')
   await page.getByLabel('Add image files', { exact: true }).setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
   await expect(page.getByRole('button', { name: 'Export preview PDF', exact: true })).toBeEnabled()
   return page.frameLocator('iframe[title="Study notes preview"]')
@@ -27,7 +30,7 @@ for (const width of [600, 720, 840, 960, 1280]) {
       let studyHeight
       for (const mode of ['Study', 'Revision']) {
         await page.getByRole('radio', { name: mode, exact: true }).check()
-        await expect(preview.locator('body')).toHaveClass(`${mode.toLowerCase()}-mode`)
+        await expect(preview.locator('body')).toHaveClass(new RegExp(`(^| )${mode.toLowerCase()}-mode( |$)`))
         await expect(page.getByRole('button', { name: 'Export preview PDF', exact: true })).toBeEnabled()
         await expect(page.getByLabel('Edit Markdown')).toHaveValue(source)
         expect(await preview.locator('main').innerHTML()).toBe(studyMain)
@@ -75,7 +78,7 @@ for (const width of [600, 720, 840, 960, 1280]) {
       await page.getByRole('radio', { name: 'Revision', exact: true }).focus()
       await page.keyboard.press('ArrowLeft')
       await expect(page.getByRole('radio', { name: 'Study', exact: true })).toBeChecked()
-      await expect(preview.locator('body')).toHaveClass('study-mode')
+      await expect(preview.locator('body')).toHaveClass(/(^| )study-mode( |$)/)
       await page.getByLabel('Upload Markdown file').setInputFiles({ name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from('bad') })
       await expect(page.getByRole('alert')).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
@@ -91,7 +94,7 @@ test('both profiles retain standard A4/Letter print sizes independent of narrow 
     await page.getByRole('radio', { name: mode, exact: true }).check()
     await page.locator('#notes-paper').selectOption(paper)
     await expect(page.getByRole('button', { name: 'Export PDF', exact: true })).toBeEnabled()
-    await expect(preview.locator('body')).toHaveClass(`${mode.toLowerCase()}-mode`)
+    await expect(preview.locator('body')).toHaveClass(new RegExp(`(^| )${mode.toLowerCase()}-mode( |$)`))
     const html = await page.locator('iframe').getAttribute('srcdoc')
     const printPage = await page.context().newPage()
     await printPage.goto(page.url())

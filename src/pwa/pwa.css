@@ -1,0 +1,115 @@
+/* Compact app-status strip: connectivity, offline readiness, install, updates. */
+.pwa-panel {
+  padding: 0.5rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  border-radius: 14px;
+}
+
+.pwa-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pwa-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pwa-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pwa-connectivity { color: var(--text-main); }
+
+.pwa-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--surface-muted);
+}
+
+.pwa-dot-online { background: var(--success); }
+.pwa-dot-offline { background: var(--warning); }
+
+.pwa-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pwa-install-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pwa-install-btn:disabled { opacity: 0.6; cursor: progress; }
+
+.pwa-install-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.pwa-help-state { color: var(--text-main); }
+
+.pwa-live:empty { display: none; }
+
+.pwa-update {
+  border: 1px solid var(--highlight-border);
+  border-left-width: 5px;
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  background: var(--highlight-soft);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.pwa-message {
+  margin: 0.4rem 0 0;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 719px) {
+  .pwa-row { align-items: center; }
+  .pwa-actions { margin-left: auto; }
+}
+
+@media print {
+  .pwa-panel { display: none !important; }
+}

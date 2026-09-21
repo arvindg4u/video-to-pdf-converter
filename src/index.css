@@ -4,42 +4,109 @@
   box-sizing: border-box;
 }
 
+/*
+ * PDF Lab colour system — "study vibes" (see docs/PALETTE.md).
+ *
+ * Light = "Paper & Ink": warm paper backgrounds instead of glaring white, navy
+ * ink for text and primary actions, an amber highlighter used sparingly, sage
+ * green for success, brick red only for errors.
+ * Dark = "Night Desk": tinted dark navy-grey surfaces (never pure black),
+ * off-white text, desaturated accents so nothing vibrates on dark surfaces.
+ *
+ * Every token pairing used by the UI is contrast-checked in
+ * tests/palette.test.js (WCAG 2.2: 4.5:1 text, 3:1 UI components).
+ */
 :root {
-  --bg-base: #f8fafc;
-  --surface-solid: #ffffff;
-  --surface-muted: #f1f5f9;
-  --border-soft: #e2e8f0;
-  --text-main: #0f172a;
-  --text-soft: #475569;
-  --text-dim: #64748b;
-  --accent: #6366f1;
-  --accent-2: #06b6d4;
-  --accent-soft: #eef2ff;
-  --progress-track: #e0e7ff;
-  --elevation: 0 4px 24px rgba(15, 23, 42, 0.08);
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg-base: #f4efe6;
+  --bg-glow: rgba(242, 177, 52, 0.16);
+  --surface-solid: #fffdf8;
+  --surface-muted: #efe8db;
+  --border-soft: #dcd3c2;
+  --border-strong: #8d8574;
+
+  /* Ink */
+  --text-main: #1f2a3a;
+  --text-soft: #4a5261;
+  --text-dim: #6b675e;
+
+  /* Primary action: navy ink */
+  --accent: #1f3d63;
+  --accent-2: #2f5d8a;
+  --on-accent: #fffdf8;
+  --accent-soft: #e3ebf4;
+  --accent-shadow: rgba(31, 61, 99, 0.22);
+
+  /* Highlighter: amber, decorative fills + emphasised values */
+  --highlight: #f2b134;
+  --highlight-soft: #fbe9bf;
+  --highlight-text: #8a5a0b;
+  --highlight-border: #b07a12;
+  --on-highlight: #1f2a3a;
+
+  /* Status */
+  --success: #2b6f53;
+  --success-soft: #dcebe1;
+  --warning: #a86c17;
+  --danger: #b23a3a;
+  --danger-soft: #f6dcdc;
+  --on-danger: #fffdf8;
+
+  /* Brand icon shadow: tied to the icon's navy, identical in both themes */
+  --brand-shadow: rgba(14, 36, 66, 0.35);
+
+  /* Controls */
+  --progress-track: #e4dccb;
+  --thumb-ring: var(--accent);
+  --elevation: 0 4px 24px rgba(63, 48, 24, 0.1);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg-base: #0f172a;
-  --surface-solid: #1e293b;
-  --surface-muted: #334155;
-  --border-soft: #475569;
-  --text-main: #f1f5f9;
-  --text-soft: #cbd5e1;
-  --text-dim: #94a3b8;
-  --accent: #818cf8;
-  --accent-2: #22d3ee;
-  --accent-soft: #312e81;
-  --progress-track: #3730a3;
-  --elevation: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  --bg-base: #141a24;
+  --bg-glow: rgba(230, 180, 85, 0.1);
+  --surface-solid: #1c2431;
+  --surface-muted: #26303f;
+  --border-soft: #354052;
+  --border-strong: #6d7890;
+
+  --text-main: #ebe6dc;
+  --text-soft: #bdb6aa;
+  --text-dim: #a09a91;
+
+  --accent: #8fb3e0;
+  --accent-2: #a9c6ea;
+  --on-accent: #0f1a2b;
+  --accent-soft: #22304a;
+  --accent-shadow: rgba(143, 179, 224, 0.22);
+
+  --highlight: #e6b455;
+  --highlight-soft: #3a3220;
+  --highlight-text: #e6b455;
+  --highlight-border: #e6b455;
+  --on-highlight: #1a1610;
+
+  --success: #7cc4a1;
+  --success-soft: #1f3a30;
+  --warning: #e0a04a;
+  --danger: #e08a8a;
+  --danger-soft: #3d2626;
+  --on-danger: #1b1214;
+
+  --progress-track: #2b3446;
+  --thumb-ring: var(--bg-base);
+  --elevation: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 body {
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--text-main);
-  background: var(--bg-base);
+  /* A faint warm glow in one corner: desk-lamp feel, no texture, no noise. */
+  background: radial-gradient(60rem 32rem at 12% -8%, var(--bg-glow), transparent 68%) no-repeat, var(--bg-base);
   padding: 1rem;
   line-height: 1.6;
 }
