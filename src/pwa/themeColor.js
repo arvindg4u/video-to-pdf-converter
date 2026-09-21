@@ -4,7 +4,8 @@
  * the manifest's theme_color only covers the splash screen and the moment
  * before the page has loaded.
  */
-export const THEME_COLORS = Object.freeze({ light: '#f8fafc', dark: '#0f172a' })
+// Must equal --bg-base of each theme in src/index.css (tests/palette.test.js checks).
+export const THEME_COLORS = Object.freeze({ light: '#f4efe6', dark: '#141a24' })
 
 export function applyThemeColor(theme, doc = document) {
   const color = THEME_COLORS[theme] || THEME_COLORS.light

@@ -16,6 +16,7 @@ Ek saath 20 videos ke frames ko ek single PDF mein merge karo!
 - ✅ **PWA Support** - App ki tarah install karo (Chrome/Edge prompt, ya manual: Share → Add to Home Screen)
 - ✅ **Offline Support** - Production build poora app precache karta hai; panel mein "Works offline" dikhne ke baad video aur Markdown (math fonts ke saath) bina internet chalte hain — details [docs/PWA.md](docs/PWA.md)
 - ✅ **Progress Tracking** - Real-time progress bar with stats
+- ✅ **Study-friendly themes** - “Paper & Ink” light theme (warm paper, navy ink, amber highlighter) and “Night Desk” dark theme; WCAG 2.2 contrast checked by tests — see [docs/PALETTE.md](docs/PALETTE.md)
 - ✅ **Remove Videos** - Upload ke baad bhi videos remove kar sakte ho
 - ✅ **Duplicate Detection** - Same video dobara add nahi hota
 

@@ -52,8 +52,8 @@
   box-shadow: 0 0 0 3px var(--surface-muted);
 }
 
-.pwa-dot-online { background: #16a34a; }
-.pwa-dot-offline { background: #d97706; }
+.pwa-dot-online { background: var(--success); }
+.pwa-dot-offline { background: var(--warning); }
 
 .pwa-actions {
   display: flex;
@@ -68,7 +68,7 @@
   border-radius: 10px;
   padding: 0.5rem 0.9rem;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
+  color: var(--on-accent);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 700;
@@ -145,11 +145,11 @@
 .pwa-live:empty { display: none; }
 
 .pwa-update {
-  border: 1px solid #f59e0b;
+  border: 1px solid var(--highlight-border);
   border-left-width: 5px;
   border-radius: 12px;
   padding: 0.75rem 0.9rem;
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--highlight-soft);
   color: var(--text-main);
   font-size: 0.875rem;
   line-height: 1.5;
@@ -169,6 +169,7 @@
     top: 100%;
     z-index: 5;
     width: min(34rem, calc(100vw - 2rem));
+    max-width: none; /* the base rule's 100% would clamp it to the summary's width */
     box-shadow: var(--elevation);
     background: var(--surface-solid);
   }
