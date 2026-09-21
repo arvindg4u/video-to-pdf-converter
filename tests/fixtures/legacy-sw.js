@@ -1,3 +1,5 @@
+// Historical fixture: the root-scoped worker shipped before the PWA rework (public/sw.js, cache video-to-pdf-v3).
+// Used by browser tests to prove that a legacy worker never produces a false "ready" message and is cleaned up.
 // v3: video-engine refactor changed the app shell + entry chunks. Old
 // `video-to-pdf-*` caches are deleted on activate (see below), so existing
 // installs pick up the new shell on next online visit. Bump this version

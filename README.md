@@ -13,8 +13,8 @@ Ek saath 20 videos ke frames ko ek single PDF mein merge karo!
 - ✅ **Readable Frame Labels** - Filename + timestamp on a contrast bar (optional)
 - ✅ **Real Cancellation** - Stop long conversions anytime, queue kept
 - ✅ **Graceful Failures** - Corrupt files fail fast with the filename named
-- ✅ **PWA Support** - App ki tarah install karo
-- ✅ **Offline Support** - Ek baar load hone ke baad offline kaam karega
+- ✅ **PWA Support** - App ki tarah install karo (Chrome/Edge prompt, ya manual: Share → Add to Home Screen)
+- ✅ **Offline Support** - Production build poora app precache karta hai; panel mein "Works offline" dikhne ke baad video aur Markdown (math fonts ke saath) bina internet chalte hain — details [docs/PWA.md](docs/PWA.md)
 - ✅ **Progress Tracking** - Real-time progress bar with stats
 - ✅ **Remove Videos** - Upload ke baad bhi videos remove kar sakte ho
 - ✅ **Duplicate Detection** - Same video dobara add nahi hota
@@ -134,7 +134,7 @@ Selection replaces the current image context; selecting a new note/sample clears
 **Deferred:** ZIP import (folder selection plus explicit files covers the current workflow), cross-note resolution, Markdown-note embeds, vault navigation/search, graph/backlinks, automatic note discovery, advanced block transclusion, Mermaid, Canvas, Dataview/plugins, TOC redesign, citations, and PDF-engine replacement.
 
 
-**Offline:** In a production build, visit both converter modes online first so their assets can be cached. Only previously used assets/fonts are available offline; external images are not cached by the app. The Vite development server is not an offline build.
+**Offline:** In a production build the service worker precaches the *whole* release during its first install — shell, all JS/CSS chunks including the lazily loaded Markdown converter, and the bundled KaTeX fonts — so the Markdown converter works offline even if it was never opened online. Wait for the *App status* panel to read “Works offline · release …” before disconnecting. External images referenced from notes are never cached, and neither are your notes, videos, or attachments. The Vite development server is not an offline build. See [docs/PWA.md](docs/PWA.md).
 
 A complete example is available at [`examples/academic-study-notes.md`](examples/academic-study-notes.md).
 
@@ -249,13 +249,13 @@ PDFs/screenshots/timing JSON stay in ignored `test-results/`; browser binaries, 
 ### Tests
 
 ```bash
-npm test                    # Unit tests: video engine, fixtures, Markdown, service worker
+npm test                    # Unit tests: video engine, fixtures, Markdown, PWA (precache inventory, service worker, client, icons)
 npx playwright install chromium
 npm run test:e2e             # Fresh production build + Chromium browser checks
-npm run build               # Production build
+npm run build               # Production build (also generates dist/sw.js and finalises dist/manifest.json)
 ```
 
-Use Node.js 20+ for the browser-test tooling. The browser suite builds the app and starts an isolated preview server on port 4173; keep that port free. It covers video uploads, drag/drop, validation, queue management, FPS, progress, real PDF downloads (header/page-count/page-size verification), cancellation, corrupt-file failures, limit guards, mobile layout, themes, Markdown uploads, live editing, print requests, multi-page PDFs, image timeouts, and cached offline use.
+Use Node.js 20+ for the browser-test tooling. The browser suite builds the app and starts an isolated preview server on port 4173; keep that port free. It covers video uploads, drag/drop, validation, queue management, FPS, progress, real PDF downloads (header/page-count/page-size verification), cancellation, corrupt-file failures, limit guards, mobile layout, themes, Markdown uploads, live editing, print requests, multi-page PDFs, image timeouts, and the PWA: first-use offline Markdown with math fonts, offline video workspace, install-prompt handling (synthetic `beforeinstallprompt` events, not an OS install), Chromium manifest/installability checks, registration failures, and real multi-tab service-worker updates (`tests/browser/offline.spec.js`, `pwa.spec.js`, `pwa-update.spec.js`).
 
 For an existing Chromium installation, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when running the browser tests.
 
@@ -272,21 +272,31 @@ npm run dev
 
 Browser mein `http://localhost:3000` kholo
 
-## 📱 PWA Installation
+## 📱 PWA Installation & Offline
+
+Full details (architecture, deployment headers, sub-directory hosting, release checklist): **[docs/PWA.md](docs/PWA.md)**.
 
 ### Desktop (Chrome/Edge):
-1. Browser mein app kholo
-2. Address bar mein "Install" icon pe click karo
-3. Ya Settings → Install app
+1. Deployed (HTTPS) app kholo
+2. *App status* panel mein **Install PDF Lab** button dikhe to click karo (button tabhi aata hai jab browser install allow karta hai)
+3. Ya address bar ka install icon / browser menu → *Install PDF Lab* (Edge: *Apps → Install this site as an app*)
 
-### Mobile (Android):
-1. Browser mein app kholo
-2. Menu → "Add to Home Screen"
-3. App icon home screen pe aa jayega
+### Mobile (Android, Chrome):
+1. App kholo
+2. Menu (⋮) → *Add to Home screen* ya *Install app*
 
-### Mobile (iOS):
+### iPhone / iPad (Safari):
 1. Safari mein app kholo
-2. Share button → "Add to Home Screen"
+2. *Share* → *Add to Home Screen* (iOS 16.4+; Safari kabhi automatic install prompt nahi deta)
+
+### Mac (Safari):
+*File → Add to Dock*. Firefox desktop web apps install nahi karta — site normal tarah chalti hai.
+
+### Offline kaise kaam karta hai
+- Pehli online visit pe service worker poora release download karke verify karta hai (SHA-256). Panel “Works offline · release …” dikhaye tab hi offline promise hai — “Preparing offline files…” ya “Offline setup failed” ka matlab abhi nahi.
+- Offline cache sirf app files rakhta hai: videos, frames, Markdown notes, attached images, exported PDFs kabhi save nahi hote; unsaved notes tab close hone pe chale jaate hain. Notes ke remote images ko internet chahiye.
+- Updates background mein download hote hain aur **sab** PDF Lab tabs/app windows band karke dobara kholne ke baad hi lagte hain. App kabhi khud reload nahi karta.
+- Service worker sirf production build (`npm run build`) mein, secure origin (HTTPS ya `localhost`) pe register hota hai. Deploy karte waqt poora `dist/` (generated `dist/sw.js` samet) ek saath publish karo — `pwa/sw.template.js` source template hai, deploy nahi hota.
 
 ## 📖 Kaise Use Kare
 
@@ -317,13 +327,13 @@ Browser mein `http://localhost:3000` kholo
 
 ## 🌐 Browser Requirements & Known Limitations
 
-- **Chromium/Chrome/Edge (primary target):** full support — tested via Playwright, including offline PWA.
+- **Chromium/Chrome/Edge (primary target):** full support — tested via Playwright, including first-use offline Markdown + math fonts, manifest installability, and real service-worker updates. Installation itself was exercised with synthetic `beforeinstallprompt` events, not through the operating system.
 - **Firefox:** expected to work (standard Video/Canvas APIs, `seeked`/`loadedmetadata`); not covered by automated browser tests in this repo.
-- **Safari:** expected to work for typical H.264 MP4s; `toDataURL` JPEG and iframe sandboxing are supported, but Safari-specific seek quirks and PWA install behavior are **not** verified here.
+- **Safari:** expected to work for typical H.264 MP4s; `toDataURL` JPEG and iframe sandboxing are supported, but Safari-specific seek quirks and Add-to-Home-Screen/Add-to-Dock behaviour are **not** verified here (Safari never fires `beforeinstallprompt`; the in-app help explains the manual route).
 - **Mobile Chromium:** layout is responsive and verified at 390 px; heavy conversions are memory-constrained on phones — prefer short clips and low FPS.
 - Very long videos, exotic codecs (HEVC/VP9-in-MP4 playback varies by browser), and DRM-protected files are outside the supported envelope and fail with explicit errors.
 - Non-Latin filenames in frame labels degrade gracefully (`?` placeholders) because PDFs use built-in Latin-1 fonts.
-- The service worker caches the app shell and production assets only — never your uploaded videos, and never remote Markdown images.
+- The service worker caches exactly the files of the shipped release (shell, scripts, styles, KaTeX fonts, manifest, icons) — never your uploaded videos or frames, Markdown notes, attached or remote images, or exported PDFs.
 
 ## 🔒 Privacy
 

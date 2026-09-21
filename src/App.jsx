@@ -8,6 +8,8 @@ import ConversionProgress from './video/ConversionProgress.jsx'
 import FrameController from './video/FrameController.jsx'
 import VideoQueue from './video/VideoQueue.jsx'
 import VideoUploader from './video/VideoUploader.jsx'
+import PwaPanel from './pwa/PwaPanel.jsx'
+import { applyThemeColor } from './pwa/themeColor.js'
 
 const MarkdownConverter = lazy(() => import('./MarkdownConverter'))
 
@@ -54,6 +56,7 @@ function App() {
     const initialTheme = readInitialTheme()
     setTheme(initialTheme)
     document.documentElement.setAttribute('data-theme', initialTheme)
+    applyThemeColor(initialTheme)
   }, [])
 
   // A delayed success reset must never wipe a NEW queue or fire after unmount.
@@ -68,6 +71,7 @@ function App() {
       // Theme still applies for this session.
     }
     document.documentElement.setAttribute('data-theme', nextTheme)
+    applyThemeColor(nextTheme)
   }
 
   const handlePickedFiles = (incoming) => {
@@ -222,15 +226,20 @@ function App() {
   return (
     <div className="app-shell">
       <header className="hero-header panel">
-        <div>
-          <p className="meta">Performance-optimized converter</p>
-          <h1>🎥 PDF Lab</h1>
-          <p className="headline">Convert videos and Markdown into beautiful PDFs</p>
+        <div className="brand">
+          <img className="brand-icon" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" width="56" height="56" decoding="async" />
+          <div>
+            <p className="meta">Video &amp; Markdown to PDF</p>
+            <h1>PDF Lab</h1>
+            <p className="headline">Convert videos and Markdown into beautiful PDFs</p>
+          </div>
         </div>
         <button type="button" className="theme-btn" onClick={toggleTheme}>
           {theme === 'light' ? 'Switch Dark' : 'Switch Light'}
         </button>
       </header>
+
+      <PwaPanel />
 
       <nav className="converter-tabs" aria-label="Conversion mode">
         <button type="button" aria-pressed={mode === 'video'} disabled={markdownBusy} onClick={() => setMode('video')}>Video to PDF</button>

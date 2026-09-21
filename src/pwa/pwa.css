@@ -1,0 +1,186 @@
+/* Compact app-status strip: connectivity, offline readiness, install, updates. */
+.pwa-panel {
+  padding: 0.7rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.pwa-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pwa-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pwa-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pwa-connectivity { color: var(--text-main); }
+
+.pwa-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--surface-muted);
+}
+
+.pwa-dot-online { background: #16a34a; }
+.pwa-dot-offline { background: #d97706; }
+
+.pwa-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pwa-install-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.5rem 0.9rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pwa-install-btn:disabled { opacity: 0.6; cursor: progress; }
+
+.pwa-install-btn:focus-visible,
+.pwa-help summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.pwa-help { position: relative; min-width: 0; }
+
+.pwa-help summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.4rem 0.2rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.pwa-help summary::-webkit-details-marker { display: none; }
+
+.pwa-help summary::after {
+  /* CSS chevron: no dependence on symbol fonts. */
+  content: '';
+  display: inline-block;
+  width: 0.45em;
+  height: 0.45em;
+  margin-left: 0.5rem;
+  margin-bottom: 0.15em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.pwa-help[open] summary::after { transform: rotate(-135deg); margin-bottom: -0.15em; }
+
+.pwa-help-body {
+  margin-top: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.pwa-help-body h3 {
+  margin: 0.6rem 0 0.25rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.pwa-help-body h3:first-child { margin-top: 0; }
+.pwa-help-body ul { margin: 0; padding-left: 1.1rem; }
+.pwa-help-body li + li { margin-top: 0.25rem; }
+.pwa-help-body p { margin: 0.25rem 0 0; }
+.pwa-help-body strong { color: var(--text-main); }
+
+.pwa-live:empty { display: none; }
+
+.pwa-update {
+  border: 1px solid #f59e0b;
+  border-left-width: 5px;
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.pwa-message {
+  margin: 0.4rem 0 0;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+
+/* The help panel opens over the row on wide screens, inline on phones. */
+@media (min-width: 720px) {
+  .pwa-help-body {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 5;
+    width: min(34rem, calc(100vw - 2rem));
+    box-shadow: var(--elevation);
+    background: var(--surface-solid);
+  }
+}
+
+@media (max-width: 719px) {
+  .pwa-row { align-items: flex-start; flex-direction: column; }
+  .pwa-actions { width: 100%; }
+  .pwa-install-btn { flex: 1 1 auto; }
+  .pwa-help { flex: 1 1 100%; }
+}
+
+@media print {
+  .pwa-panel { display: none !important; }
+}

@@ -49,6 +49,21 @@
   transform: scale(0.99);
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.brand-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(15, 31, 61, 0.35);
+}
+
 .meta {
   color: var(--text-dim);
   font-size: 0.7rem;
@@ -451,6 +466,12 @@ h2 {
   .hero-header { 
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .brand-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
   }
   
   .theme-btn {
