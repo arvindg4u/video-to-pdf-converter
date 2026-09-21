@@ -17,7 +17,7 @@ import { startReleaseServer } from './releaseServer.js'
 test.use({ serviceWorkers: 'allow' })
 
 const DIST = path.resolve('dist')
-const READY = /Works offline · release ([0-9a-f]{8})/
+const READY = /^Offline ready$/
 
 async function buildReleases() {
   const template = await readFile(TEMPLATE_PATH, 'utf8')
@@ -49,7 +49,7 @@ async function buildReleases() {
 async function waitForReady(page, url, version) {
   await page.goto(url)
   await expect(page.locator('.pwa-offline-text')).toHaveText(READY, { timeout: 60_000 })
-  await expect(page.locator('.pwa-offline-text')).toContainText(`release ${version.slice(0, 8)}`)
+  await expect(page.locator('.pwa-panel')).toHaveAttribute('data-release', version)
   expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 }
 
@@ -100,7 +100,7 @@ test.describe('real worker updates (Chromium, production build)', () => {
       await expect(tab1.locator('.pwa-update')).toBeVisible({ timeout: 30_000 })
       expect(await tab1.evaluate(() => window.__pdfLabTabMarker)).toBe('still-the-same-document')
       await expect(editor).toHaveValue(/Do not lose me/)
-      await expect(tab1.locator('.pwa-offline-text')).toContainText(`release ${A.slice(0, 8)}`)
+      await expect(tab1.locator('.pwa-panel')).toHaveAttribute('data-release', A)
 
       let state = await registrationState(tab1)
       expect(state.waiting).toBe(true)
@@ -116,7 +116,7 @@ test.describe('real worker updates (Chromium, production build)', () => {
       expect(state.waiting).toBe(true)
       expect(await tab1.evaluate(() => window.__pdfLabTabMarker)).toBe('still-the-same-document')
       await expect(editor).toHaveValue(/Do not lose me/)
-      await expect(tab1.locator('.pwa-offline-text')).toContainText(`release ${A.slice(0, 8)}`)
+      await expect(tab1.locator('.pwa-panel')).toHaveAttribute('data-release', A)
 
       // Closing the last tab lets B activate and clean up A's cache.
       await tab1.close()
@@ -158,7 +158,7 @@ test.describe('real worker updates (Chromium, production build)', () => {
       // The broken worker's install fails (404 during precache) and it becomes redundant.
       await expect(tab2.locator('.pwa-message')).toContainText(/newer version could not be downloaded/i, { timeout: 60_000 })
       await expect(tab2.locator('.pwa-update')).toHaveCount(0)
-      await expect(tab2.locator('.pwa-offline-text')).toContainText(`release ${A.slice(0, 8)}`)
+      await expect(tab2.locator('.pwa-panel')).toHaveAttribute('data-release', A)
       expect(server.requests).toContain('/assets/missing-deadbeef.js')
 
       const state = await registrationState(tab2)
@@ -171,7 +171,7 @@ test.describe('real worker updates (Chromium, production build)', () => {
       // Still fully usable offline on release A.
       await context.setOffline(true)
       await tab2.reload()
-      await expect(tab2.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+      await expect(tab2.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
       await expect(tab2.locator('.pwa-connectivity')).toHaveText('Offline')
       await context.setOffline(false)
       await tab1.close()
@@ -186,13 +186,14 @@ test.describe('real worker updates (Chromium, production build)', () => {
     try {
       const page = await context.newPage()
       await page.goto(server.url)
-      await expect(page.locator('.pwa-offline-text')).toHaveText(/Offline setup failed/, { timeout: 30_000 })
+      await expect(page.locator('.pwa-offline-text')).toHaveText('Offline unavailable', { timeout: 30_000 })
+      await expect(page.locator('.pwa-panel')).toHaveAttribute('data-phase', 'failed')
       await expect(page.locator('.pwa-connectivity')).toHaveText('Online')
       expect(server.requests).toContain('/sw.js')
       expect(await page.evaluate(async () => Boolean(await navigator.serviceWorker.getRegistration()))).toBe(false)
 
       // Both converters remain usable online.
-      await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
       await page.getByRole('button', { name: 'Markdown to PDF', exact: true }).click()
       await page.getByRole('button', { name: 'Try a sample' }).click()
       const preview = page.frameLocator('iframe[title="Study notes preview"]')

@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test'
  * fires the real event). Real-device steps live in docs/PWA.md.
  */
 
-const READY = /Works offline · release [0-9a-f]{8}/
+const READY = /^Offline ready$/
 
 function dispatchInstallPrompt(page, { outcome = 'accepted', fail = false } = {}) {
   return page.evaluate(({ outcome, fail }) => {
@@ -55,12 +55,16 @@ test.describe('install prompt (synthetic browser events)', () => {
     await dispatchInstallPrompt(page, { fail: true })
     await page.getByRole('button', { name: 'Install PDF Lab' }).click()
     await expect(page.locator('.pwa-message')).toContainText('could not be shown')
-    // Manual instructions are one keyboard step away.
-    await page.locator('.pwa-help summary').focus()
+    // Manual instructions are one keyboard step away, behind the "i" button.
+    await page.locator('.pwa-panel .tip-btn').focus()
     await page.keyboard.press('Enter')
-    await expect(page.locator('.pwa-help-body')).toContainText('Add to Home Screen')
-    await expect(page.locator('.pwa-help-body')).toContainText('Chrome / Edge (desktop)')
-    await expect(page.locator('.pwa-help-body')).toContainText('never saves your videos, Markdown notes')
+    const tip = page.getByRole('dialog', { name: 'Offline use & installing' })
+    await expect(tip).toContainText('Add to Home Screen')
+    await expect(tip).toContainText('Chrome / Edge (desktop)')
+    await expect(tip).toContainText('never saves your videos, Markdown notes')
+    await page.keyboard.press('Escape')
+    await expect(tip).toBeHidden()
+    await expect(page.locator('.pwa-panel .tip-btn')).toBeFocused()
   })
 
   test('no install offer inside a standalone (installed) window', async ({ page }) => {
@@ -87,9 +91,14 @@ test.describe('registration failure', () => {
 
   test('a blocked registration is reported truthfully and the converters keep working online', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('.pwa-offline-text')).toHaveText(/Offline setup failed — PDF Lab still works online/, { timeout: 15_000 })
+    await expect(page.locator('.pwa-offline-text')).toHaveText('Offline unavailable', { timeout: 15_000 })
+    await expect(page.locator('.pwa-panel')).toHaveAttribute('data-phase', 'failed')
     await expect(page.locator('.pwa-offline-text')).not.toHaveText(READY)
-    await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+    // The truthful explanation lives in the info tip.
+    await page.locator('.pwa-panel .tip-btn').click()
+    await expect(page.getByRole('dialog', { name: 'Offline use & installing' })).toContainText('Offline setup failed')
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
     await page.getByLabel('Choose MP4 video files').setInputFiles([
       { name: 'still-works.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(1024, 1) },
     ])
@@ -154,12 +163,15 @@ test.describe('mobile layout', () => {
     await expect(page.getByRole('button', { name: 'Install PDF Lab' })).toBeVisible()
     expect(await noOverflow()).toEqual({ document: true, panel: true })
 
-    await page.locator('.pwa-help summary').click()
-    await expect(page.locator('.pwa-help-body')).toBeVisible()
+    await page.locator('.pwa-panel .tip-btn').click()
+    const tip = page.getByRole('dialog', { name: 'Offline use & installing' })
+    await expect(tip).toBeVisible()
     expect(await noOverflow()).toEqual({ document: true, panel: true })
-    const help = await page.locator('.pwa-help-body').boundingBox()
+    const help = await tip.boundingBox()
     expect(help.x).toBeGreaterThanOrEqual(0)
     expect(help.x + help.width).toBeLessThanOrEqual(390)
+    await tip.getByRole('button', { name: 'Close' }).click()
+    await expect(tip).toBeHidden()
 
     // The converter controls stay reachable below the strip.
     await expect(page.getByRole('button', { name: 'Video to PDF', exact: true })).toBeVisible()

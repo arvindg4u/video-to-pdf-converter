@@ -92,15 +92,15 @@ On `activate` the worker deletes caches whose name starts with `pdf-lab::<its ow
 
 ### Readiness is measured, not assumed
 
-The page never announces "works offline" merely because a worker is registered. `src/pwa/serviceWorkerClient.js` asks the *controlling* worker for a status report (`postMessage({type:'pdf-lab:status'})`, answered over a `MessageChannel`). The worker counts its inventory entries in its cache and replies `complete: true/false` together with its version. Only `complete: true` from an active controller produces `Works offline · release <version>`. Other outcomes are reported truthfully:
+The page never announces "works offline" merely because a worker is registered. `src/pwa/serviceWorkerClient.js` asks the *controlling* worker for a status report (`postMessage({type:'pdf-lab:status'})`, answered over a `MessageChannel`). The worker counts its inventory entries in its cache and replies `complete: true/false` together with its version. Only `complete: true` from an active controller produces `Offline ready`. The strip shows a short state; the "i" button next to it opens the full explanation (including the release id), and the `.pwa-panel` element carries `data-phase` and `data-release` attributes for tests and support. Other outcomes are reported truthfully:
 
 | Panel text | Meaning |
 | --- | --- |
-| `Preparing offline files…` | Registration or first install in progress. |
-| `Works offline · release abcd1234` | Active worker confirmed every file of its release is cached. |
-| `Offline files are incomplete — reload while online to finish setup.` | The report came back incomplete (for example after storage eviction). When online the client first asks the worker once to repair (`pdf-lab:repair`, which refetches and verifies the missing files) and only shows this text if that fails. |
-| `Offline setup failed — PDF Lab still works online.` | Registration rejected (404, wrong MIME type, blocked by policy) or the install was discarded. |
-| `Offline setup finishes after you close all PDF Lab tabs and reopen it.` | An old worker that does not speak the status protocol (the previous `video-to-pdf-` worker) is still in control. |
+| `Preparing offline…` | Registration or first install in progress. |
+| `Offline ready` | Active worker confirmed every file of its release is cached (release id in the info tip and `data-release`). |
+| `Offline incomplete` | The report came back incomplete (for example after storage eviction). When online the client first asks the worker once to repair (`pdf-lab:repair`, which refetches and verifies the missing files) and only shows this text if that fails. |
+| `Offline unavailable` (`data-phase="failed"`; the tip says "Offline setup failed … still works online") | Registration rejected (404, wrong MIME type, blocked by policy) or the install was discarded. |
+| `Offline after restart` | An old worker that does not speak the status protocol (the previous `video-to-pdf-` worker) is still in control. |
 | `Offline use is available in production builds only.` / `… needs a secure (HTTPS) connection.` / `… is not supported by this browser.` | The worker is not registered at all — see the next section. |
 
 ### When the worker is registered
@@ -110,7 +110,7 @@ The page never announces "works offline" merely because a worker is registered. 
 ## Installation
 
 - **Chromium browsers (Chrome, Edge, Brave, Opera, Samsung Internet, Android WebView-based browsers):** when the browser decides the app is installable it fires `beforeinstallprompt`. The app calls `preventDefault()`, keeps the event, and only then shows the **Install PDF Lab** button. The prompt is triggered exclusively by clicking that button; the result (`accepted`/`dismissed`), errors (a prompt that throws, or a second call on the single-use event), and the `appinstalled` event are all handled and reflected in the panel. The button is never shown inside a standalone/installed window (`display-mode: standalone`/`fullscreen`/`minimal-ui`/`window-controls-overlay`, or `navigator.standalone` on iOS), and it disappears after installation.
-- **Manual routes** (shown under *Install & offline help*): the address-bar install icon or *Install PDF Lab* in the Chrome/Edge menu; Safari on macOS 14+ *File → Add to Dock*; iPhone/iPad Safari *Share → Add to Home Screen* (iOS/iPadOS 16.4+; Apple platforms never fire `beforeinstallprompt`); Firefox desktop has no install feature and Firefox for Android uses *Add to Home screen*. These are documented from the sources above; **they were not exercised on real Android or iOS devices as part of this work.**
+- **Manual routes** (shown in the strip’s "i" tip, *Offline use & installing*): the address-bar install icon or *Install PDF Lab* in the Chrome/Edge menu; Safari on macOS 14+ *File → Add to Dock*; iPhone/iPad Safari *Share → Add to Home Screen* (iOS/iPadOS 16.4+; Apple platforms never fire `beforeinstallprompt`); Firefox desktop has no install feature and Firefox for Android uses *Add to Home screen*. These are documented from the sources above; **they were not exercised on real Android or iOS devices as part of this work.**
 - An installed app is identified by the manifest `id`; deploying new builds updates the installed app rather than creating a new one.
 
 ## Safe updates (no lost work)
@@ -131,7 +131,7 @@ Recommended response headers:
 
 | Path | `Cache-Control` | Notes |
 | --- | --- | --- |
-| `/sw.js` | `no-cache` (or `max-age=0, must-revalidate`) | Browsers cap worker-script caching at 24 h, but immediate updates need revalidation. Serve as `text/javascript`. A wrong type (for example `text/html` from a SPA fallback) makes registration fail — the panel then shows *Offline setup failed*. |
+| `/sw.js` | `no-cache` (or `max-age=0, must-revalidate`) | Browsers cap worker-script caching at 24 h, but immediate updates need revalidation. Serve as `text/javascript`. A wrong type (for example `text/html` from a SPA fallback) makes registration fail — the strip then shows *Offline unavailable*. |
 | `/index.html`, `/` | `no-cache` | The worker refetches the shell with `no-cache` during install; the HTTP layer must honour that. |
 | `/manifest.json` | `no-cache` or short `max-age` | `application/manifest+json` preferred; `application/json` also works. Same-origin, no credentials needed. |
 | `/assets/*` | `public, max-age=31536000, immutable` | File names contain content hashes. |
@@ -165,7 +165,7 @@ A relative base (`./`) also works for the files themselves, but then the manifes
 ## Privacy and storage boundaries
 
 - Cache Storage contains exactly the files of the shipped release — the same public files any visitor downloads. It never contains videos, extracted frames, Markdown text, attached images, remote images, or exported PDFs. Nothing is sent anywhere; there is no analytics or sync.
-- The app does not persist user documents at all: closing the tab discards unsaved notes and queued videos. "Works offline" means the *application* is available offline, not that your files are saved — the help panel says so explicitly.
+- The app does not persist user documents at all: closing the tab discards unsaved notes and queued videos. "Offline ready" means the *application* is available offline, not that your files are saved — the info tip says so explicitly.
 - Storage failures (quota, private mode, disabled storage) only disable offline use; they never block online use.
 - Cache names are prefixed with `pdf-lab::<scope>::` and only those are ever deleted by the app.
 
@@ -180,12 +180,12 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npx playwright test \
   tests/browser/offline.spec.js tests/browser/pwa.spec.js tests/browser/pwa-update.spec.js
 ```
 
-`offline.spec.js` proves the critical path: visit only the video workspace online, wait for *Works offline*, go offline, reload, open the Markdown converter for the first time, and render the sample with the bundled KaTeX fonts. `pwa.spec.js` checks the install-prompt flow with synthetic `beforeinstallprompt` events (this is not an operating-system installation), Chromium's manifest parse and installability report (`Page.getAppManifest`, `Page.getInstallabilityErrors`), the 390 px layout with the help expanded, and print hiding. `pwa-update.spec.js` exercises real worker updates: two tabs with unsaved notes, a waiting release, one tab closed, activation only after the last tab closes, a broken release being discarded, and a real 404 for `sw.js`.
+`offline.spec.js` proves the critical path: visit only the video workspace online, wait for *Offline ready*, go offline, reload, open the Markdown converter for the first time, and render the sample with the bundled KaTeX fonts. `pwa.spec.js` checks the install-prompt flow with synthetic `beforeinstallprompt` events (this is not an operating-system installation), Chromium's manifest parse and installability report (`Page.getAppManifest`, `Page.getInstallabilityErrors`), the 390 px layout with the info tip open, and print hiding. `pwa-update.spec.js` exercises real worker updates: two tabs with unsaved notes, a waiting release, one tab closed, activation only after the last tab closes, a broken release being discarded, and a real 404 for `sw.js`.
 
 Manual, on real devices (not covered by automation):
 
 1. Open the deployed HTTPS URL in Chrome desktop. DevTools → *Application → Manifest*: no warnings, `id` shows the deployment path, the maskable preview keeps the artwork inside the circle. *Application → Service workers*: status *activated and is running*, source `sw.js`. *Application → Cache storage*: one `pdf-lab::…` cache with the number of files the build logged.
-2. Confirm the panel reads *Works offline · release …*, tick *Offline* in DevTools, reload, open Markdown, load the sample: math renders with the bundled fonts.
+2. Confirm the strip reads *Offline ready* (release id in the "i" tip), tick *Offline* in DevTools, reload, open Markdown, load the sample: math renders with the bundled fonts.
 3. Install from the panel button (Chrome/Edge) and check the installed window has no install button, the title bar uses the navy theme, and the icon looks right in the OS launcher.
 4. Android Chrome: install from the browser menu or the prompt, check the adaptive icon on the home screen and the splash screen colours. iPhone/iPad Safari: *Share → Add to Home Screen*, then launch from the home screen and verify offline use after a first online visit (Safari evicts storage of unused sites after a period of inactivity; that is a platform policy).
 5. Deploy a second build, return to an open tab (or reopen it): the *Update ready* notice appears; nothing reloads; after closing every tab and window and reopening, the new release version shows in the panel and the old cache is gone.

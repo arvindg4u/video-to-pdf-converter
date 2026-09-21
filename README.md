@@ -14,8 +14,9 @@ Ek saath 20 videos ke frames ko ek single PDF mein merge karo!
 - ✅ **Real Cancellation** - Stop long conversions anytime, queue kept
 - ✅ **Graceful Failures** - Corrupt files fail fast with the filename named
 - ✅ **PWA Support** - App ki tarah install karo (Chrome/Edge prompt, ya manual: Share → Add to Home Screen)
-- ✅ **Offline Support** - Production build poora app precache karta hai; panel mein "Works offline" dikhne ke baad video aur Markdown (math fonts ke saath) bina internet chalte hain — details [docs/PWA.md](docs/PWA.md)
+- ✅ **Offline Support** - Production build poora app precache karta hai; status strip mein "Offline ready" dikhne ke baad video aur Markdown (math fonts ke saath) bina internet chalte hain — details [docs/PWA.md](docs/PWA.md)
 - ✅ **Progress Tracking** - Real-time progress bar with stats
+- ✅ **Minimal UI** - Screen pe sirf labels, controls aur status; har hint/help ek chhote **i** button ke peeche (tap/click, Enter/Space; Escape se band; screen readers ke liye `dialog` role) — `src/ui/InfoTip.jsx`
 - ✅ **Study-friendly themes** - “Paper & Ink” light theme (warm paper, navy ink, amber highlighter) and “Night Desk” dark theme; WCAG 2.2 contrast checked by tests — see [docs/PALETTE.md](docs/PALETTE.md)
 - ✅ **Remove Videos** - Upload ke baad bhi videos remove kar sakte ho
 - ✅ **Duplicate Detection** - Same video dobara add nahi hota
@@ -135,7 +136,7 @@ Selection replaces the current image context; selecting a new note/sample clears
 **Deferred:** ZIP import (folder selection plus explicit files covers the current workflow), cross-note resolution, Markdown-note embeds, vault navigation/search, graph/backlinks, automatic note discovery, advanced block transclusion, Mermaid, Canvas, Dataview/plugins, TOC redesign, citations, and PDF-engine replacement.
 
 
-**Offline:** In a production build the service worker precaches the *whole* release during its first install — shell, all JS/CSS chunks including the lazily loaded Markdown converter, and the bundled KaTeX fonts — so the Markdown converter works offline even if it was never opened online. Wait for the *App status* panel to read “Works offline · release …” before disconnecting. External images referenced from notes are never cached, and neither are your notes, videos, or attachments. The Vite development server is not an offline build. See [docs/PWA.md](docs/PWA.md).
+**Offline:** In a production build the service worker precaches the *whole* release during its first install — shell, all JS/CSS chunks including the lazily loaded Markdown converter, and the bundled KaTeX fonts — so the Markdown converter works offline even if it was never opened online. Wait for the status strip to read “Offline ready” before disconnecting (the release id and a plain-language explanation are behind the strip’s “i” button). External images referenced from notes are never cached, and neither are your notes, videos, or attachments. The Vite development server is not an offline build. See [docs/PWA.md](docs/PWA.md).
 
 A complete example is available at [`examples/academic-study-notes.md`](examples/academic-study-notes.md).
 
@@ -294,7 +295,7 @@ Full details (architecture, deployment headers, sub-directory hosting, release c
 *File → Add to Dock*. Firefox desktop web apps install nahi karta — site normal tarah chalti hai.
 
 ### Offline kaise kaam karta hai
-- Pehli online visit pe service worker poora release download karke verify karta hai (SHA-256). Panel “Works offline · release …” dikhaye tab hi offline promise hai — “Preparing offline files…” ya “Offline setup failed” ka matlab abhi nahi.
+- Pehli online visit pe service worker poora release download karke verify karta hai (SHA-256). Strip “Offline ready” dikhaye tab hi offline promise hai — “Preparing offline…” ya “Offline unavailable” ka matlab abhi nahi (details “i” button mein).
 - Offline cache sirf app files rakhta hai: videos, frames, Markdown notes, attached images, exported PDFs kabhi save nahi hote; unsaved notes tab close hone pe chale jaate hain. Notes ke remote images ko internet chahiye.
 - Updates background mein download hote hain aur **sab** PDF Lab tabs/app windows band karke dobara kholne ke baad hi lagte hain. App kabhi khud reload nahi karta.
 - Service worker sirf production build (`npm run build`) mein, secure origin (HTTPS ya `localhost`) pe register hota hai. Deploy karte waqt poora `dist/` (generated `dist/sw.js` samet) ek saath publish karo — `pwa/sw.template.js` source template hai, deploy nahi hota.

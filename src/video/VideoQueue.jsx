@@ -9,9 +9,9 @@ function formatSizeMb(bytes) {
 export default function VideoQueue({ files, disabled, onRemove }) {
   return (
     <section className="queue-panel panel" aria-label="Video queue">
-      <h2>Queue Lane</h2>
+      <h2>Queue</h2>
       {files.length === 0 ? (
-        <p className="muted">Queue is empty — add some .mp4 videos to begin.</p>
+        <p className="muted">Queue is empty.</p>
       ) : (
         <ul className="queue-list" aria-label={`${files.length} videos queued`}>
           {files.map((file, index) => (

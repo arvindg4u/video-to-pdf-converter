@@ -80,6 +80,6 @@ test('mode switching changes document composition, not Markdown parsing or sourc
   assert.match(component, /\}, \[deferredSource, assets\]\)/)
   assert.match(component, /\[rendered, title, fileName, paper, mode\]/)
   assert.match(component, /type="radio" name="notes-mode"/)
-  assert.match(component, /<legend>Output mode<\/legend>/)
+  assert.match(component, /<legend>Mode<\/legend>/)
   assert.match(component, /checked=\{mode === value\}/)
 })

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 async function openMarkdown(page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Markdown to PDF', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Turn Markdown into study-ready notes' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Markdown notes' })).toBeVisible()
 }
 
 async function sample(page) {
@@ -31,7 +31,7 @@ test('uploads Markdown, renders all study elements, and retains edits across mod
   await page.getByLabel('Edit Markdown').fill('# Edited notes\n\n**Important**')
   await expect(preview.getByRole('heading', { name: 'Edited notes' })).toBeVisible()
   await page.getByRole('button', { name: 'Video to PDF', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
   await page.getByRole('button', { name: 'Markdown to PDF', exact: true }).click()
   await expect(page.getByLabel('Edit Markdown')).toHaveValue('# Edited notes\n\n**Important**')
 })
@@ -225,7 +225,7 @@ test('requests printing of only the notes after fonts load, with the chosen pape
   expect(await frame.evaluate(() => window.printRequested)).toBe(true)
   expect(await frame.locator('style').textContent()).toContain('size: Letter')
   expect(await frame.evaluate(() => document.fonts.check('16px KaTeX_Main'))).toBe(true)
-  await expect(frame.getByRole('heading', { name: 'Frame Controller' })).toHaveCount(0)
+  await expect(frame.getByRole('heading', { name: 'Frame settings' })).toHaveCount(0)
 })
 
 test('produces a multipage PDF from a long rendered document without horizontal overflow', async ({ page }, testInfo) => {
@@ -367,7 +367,8 @@ test('selected image folder preserves nested paths and rejects disguised image c
     await expect(page.getByRole('alert')).toContainText('Invalid image content')
     await expect(preview.locator('img')).toHaveCount(2) // failed imports are atomic
     await page.getByRole('button', { name: 'Try a sample' }).click()
-    await expect(page.getByText('0 local images', { exact: false })).toBeVisible()
+    await expect(page.locator('.md-assets-count')).toHaveCount(0) // images cleared with the new note
+    await expect(page.getByRole('button', { name: 'Clear local images' })).toHaveCount(0)
   } finally { await rm(folder, { recursive: true, force: true }) }
 })
 

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.use({ serviceWorkers: 'allow' })
 
-const READY = /Works offline · release [0-9a-f]{8}/
+const READY = /^Offline ready$/
 
 /** Waits until the app itself confirms that the active worker holds the complete release. */
 async function waitForOfflineReady(page) {
@@ -15,7 +15,7 @@ async function waitForOfflineReady(page) {
 test('critical: Markdown opened for the FIRST time offline renders the sample with bundled math fonts', async ({ page, context }) => {
   // Online: only the video workspace is visited. Markdown is never opened.
   await waitForOfflineReady(page)
-  await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
   expect(await page.locator('.markdown-workspace').count()).toBe(0)
 
   await context.setOffline(true)
@@ -47,7 +47,7 @@ test('video workspace loads offline and still queues local files', async ({ page
   await waitForOfflineReady(page)
   await context.setOffline(true)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Frame Controller' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Frame settings' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Generate PDF', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Browse Files' })).toBeVisible()
   await page.getByLabel('Choose MP4 video files').setInputFiles([

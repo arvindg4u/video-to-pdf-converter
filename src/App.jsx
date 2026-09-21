@@ -9,6 +9,7 @@ import FrameController from './video/FrameController.jsx'
 import VideoQueue from './video/VideoQueue.jsx'
 import VideoUploader from './video/VideoUploader.jsx'
 import PwaPanel from './pwa/PwaPanel.jsx'
+import InfoTip from './ui/InfoTip.jsx'
 import { applyThemeColor } from './pwa/themeColor.js'
 
 const MarkdownConverter = lazy(() => import('./MarkdownConverter'))
@@ -227,15 +228,15 @@ function App() {
     <div className="app-shell">
       <header className="hero-header panel">
         <div className="brand">
-          <img className="brand-icon" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" width="56" height="56" decoding="async" />
-          <div>
-            <p className="meta">Video &amp; Markdown to PDF</p>
-            <h1>PDF Lab</h1>
-            <p className="headline">Convert videos and Markdown into beautiful PDFs</p>
-          </div>
+          <img className="brand-icon" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" width="44" height="44" decoding="async" />
+          <h1>PDF Lab</h1>
+          <InfoTip label="About PDF Lab">
+            <p>Turn <strong>video frames</strong> and <strong>Markdown study notes</strong> into PDFs.</p>
+            <p>Everything runs in your browser: files are never uploaded, and the app keeps working offline once its files are stored on this device.</p>
+          </InfoTip>
         </div>
-        <button type="button" className="theme-btn" onClick={toggleTheme}>
-          {theme === 'light' ? 'Switch Dark' : 'Switch Light'}
+        <button type="button" className="theme-btn" onClick={toggleTheme} aria-label={theme === 'light' ? 'Switch Dark' : 'Switch Light'}>
+          {theme === 'light' ? 'Dark' : 'Light'}
         </button>
       </header>
 

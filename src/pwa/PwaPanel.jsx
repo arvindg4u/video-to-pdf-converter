@@ -1,77 +1,94 @@
 import { useId } from 'react'
 import { PHASE } from './serviceWorkerClient.js'
 import { usePwa } from './usePwa.js'
+import InfoTip from '../ui/InfoTip.jsx'
 import './pwa.css'
 
-const UNAVAILABLE_TEXT = {
-  unsupported: 'Offline use is not supported by this browser.',
-  insecure: 'Offline use needs a secure (HTTPS) connection.',
+/** Short, on-screen state. The full explanation lives in the info tip. */
+export function describeOffline(worker) {
+  switch (worker.phase) {
+    case PHASE.READY: return 'Offline ready'
+    case PHASE.PENDING: return 'Preparing offline…'
+    case PHASE.INCOMPLETE: return 'Offline incomplete'
+    case PHASE.FAILED: return 'Offline unavailable'
+    case PHASE.LEGACY: return 'Offline after restart'
+    case PHASE.UNAVAILABLE:
+    default: return 'Online only'
+  }
+}
+
+const UNAVAILABLE_REASON = {
+  unsupported: 'This browser has no service-worker support, so PDF Lab runs online only.',
+  insecure: 'Offline use needs a secure (HTTPS) connection; on this address PDF Lab runs online only.',
   development: 'Offline use is available in production builds only.',
 }
 
-export function describeOffline(worker) {
+/** Truthful long-form explanation of the current offline state. */
+export function explainOffline(worker) {
   switch (worker.phase) {
     case PHASE.READY:
-      return `Works offline · release ${worker.version ? worker.version.slice(0, 8) : 'ready'}`
+      return `The whole app — video converter, Markdown editor and bundled math fonts — is stored on this device (release ${worker.version ? worker.version.slice(0, 8) : 'unknown'}). It keeps working without internet.`
     case PHASE.PENDING:
-      return 'Preparing offline files…'
+      return 'PDF Lab is downloading and verifying its files for offline use. Stay online until this finishes; everything already works online.'
     case PHASE.INCOMPLETE:
-      return 'Offline files are incomplete — reload while online to finish setup.'
+      return 'Some offline files are missing (for example after the browser cleared storage). Reload while online to complete the set; online use is unaffected.'
     case PHASE.FAILED:
-      return 'Offline setup failed — PDF Lab still works online.'
+      return `Offline setup failed${worker.error ? ` (${worker.error})` : ''}. PDF Lab still works online; it will try again on the next start.`
     case PHASE.LEGACY:
-      return 'Offline setup finishes after you close all PDF Lab tabs and reopen it.'
+      return 'An older offline version is still active. Close all PDF Lab tabs and app windows, then reopen it to finish the switch.'
     case PHASE.UNAVAILABLE:
     default:
-      return UNAVAILABLE_TEXT[worker.reason] || UNAVAILABLE_TEXT.unsupported
+      return UNAVAILABLE_REASON[worker.reason] || UNAVAILABLE_REASON.unsupported
   }
 }
 
 export default function PwaPanel() {
   const { online, worker, install, promptInstall } = usePwa()
   const headingId = useId()
-  const offlineText = describeOffline(worker)
   const showInstall = install.canPrompt && !install.installed && !install.standalone
 
   return (
-    <section className="pwa-panel panel" aria-labelledby={headingId}>
+    <section
+      className="pwa-panel panel"
+      aria-labelledby={headingId}
+      data-phase={worker.phase}
+      data-release={worker.version || ''}
+    >
       <h2 id={headingId} className="pwa-heading">App status</h2>
       <div className="pwa-row">
         <p className="pwa-status" aria-live="polite">
           <span className={`pwa-dot ${online ? 'pwa-dot-online' : 'pwa-dot-offline'}`} aria-hidden="true" />
           <span className="pwa-connectivity">{online ? 'Online' : 'Offline'}</span>
           <span className="pwa-separator" aria-hidden="true">·</span>
-          <span className="pwa-offline-text">{offlineText}</span>
+          <span className="pwa-offline-text">{describeOffline(worker)}</span>
         </p>
         <div className="pwa-actions">
           {showInstall && (
             <button type="button" className="pwa-install-btn" onClick={promptInstall} disabled={install.prompting}>
-              {install.prompting ? 'Opening install prompt…' : 'Install PDF Lab'}
+              {install.prompting ? 'Opening…' : 'Install PDF Lab'}
             </button>
           )}
-          <details className="pwa-help">
-            <summary>Install &amp; offline help</summary>
-            <div className="pwa-help-body">
-              <h3>Install PDF Lab</h3>
-              <ul>
-                <li><strong>Chrome / Edge (desktop):</strong> click the install icon at the right end of the address bar, or open the browser menu (three dots) and choose <em>Install PDF Lab</em> (in Edge: <em>Apps</em>, then <em>Install this site as an app</em>).</li>
-                <li><strong>Chrome (Android):</strong> open the menu (three dots), then <em>Add to Home screen</em> or <em>Install app</em>.</li>
-                <li><strong>iPhone / iPad (Safari):</strong> tap <em>Share</em>, then <em>Add to Home Screen</em>. On iOS 16.4 and later, other browsers offer the same option in their Share menu.</li>
-                <li><strong>Safari (Mac):</strong> open the <em>File</em> menu, then <em>Add to Dock</em>.</li>
-                <li><strong>Firefox (desktop):</strong> installing web apps is not supported; PDF Lab keeps working as a website.</li>
-              </ul>
-              <h3>Working offline</h3>
-              <p>Once setup is complete, the whole app — video converter, Markdown editor and bundled math fonts — loads without internet. Offline caching stores the app only: it never saves your videos, Markdown notes, images or exported PDFs, and unsaved notes are lost when a tab closes. Remote images in Markdown still need internet, and clearing site data removes the offline files.</p>
-              <h3>Updates</h3>
-              <p>New releases download in the background and take effect only after every PDF Lab tab and installed app window has been closed. PDF Lab never reloads a page on its own.</p>
-            </div>
-          </details>
+          <InfoTip label="Offline use & installing" className="pwa-help">
+            <p className="pwa-help-state">{explainOffline(worker)}</p>
+            <h4>Install PDF Lab</h4>
+            <ul>
+              <li><strong>Chrome / Edge (desktop):</strong> click the install icon at the right end of the address bar, or open the browser menu (three dots) and choose <em>Install PDF Lab</em> (Edge: <em>Apps</em>, then <em>Install this site as an app</em>).</li>
+              <li><strong>Chrome (Android):</strong> menu (three dots), then <em>Add to Home screen</em> or <em>Install app</em>.</li>
+              <li><strong>iPhone / iPad (Safari):</strong> tap <em>Share</em>, then <em>Add to Home Screen</em> (iOS 16.4+; other browsers offer the same in their Share menu).</li>
+              <li><strong>Safari (Mac):</strong> <em>File</em> menu, then <em>Add to Dock</em>.</li>
+              <li><strong>Firefox (desktop):</strong> installing web apps is not supported; PDF Lab keeps working as a website.</li>
+            </ul>
+            <h4>What offline caching stores</h4>
+            <p>Only the app itself. It never saves your videos, Markdown notes, images or exported PDFs; unsaved notes are lost when a tab closes. Remote images in notes still need internet, and clearing site data removes the offline files.</p>
+            <h4>Updates</h4>
+            <p>New releases download in the background and take effect only after every PDF Lab tab and installed window has been closed. PDF Lab never reloads a page on its own.</p>
+          </InfoTip>
         </div>
       </div>
       <div className="pwa-live" aria-live="polite">
         {worker.updateWaiting && (
           <div className="pwa-update">
-            <strong>Update ready.</strong> A new version of PDF Lab has been downloaded. To switch: save or export your work, close <strong>all</strong> PDF Lab tabs and installed app windows, then reopen it. Nothing reloads on its own.
+            <strong>Update ready.</strong> Save or export your work, then close <strong>all</strong> PDF Lab tabs and installed app windows and reopen it. Nothing reloads on its own.
           </div>
         )}
         {worker.updateFailed && !worker.updateWaiting && (
