@@ -23,6 +23,7 @@ body.revision-mode { font-size: 11pt; line-height: 1.48; }
 .revision-mode th, .revision-mode td { padding: 3px 7px; }
 .revision-mode pre { margin: 9px 0; padding: 8px 11px; }
 .revision-mode .katex-display { margin: 10px 0; }
+.revision-mode .math-diagram-figure, .revision-mode .mermaid-figure { margin: 10px 0; }
 .revision-mode .notes-toc { margin-bottom: 16px; padding-bottom: 10px; }
 .revision-mode .notes-toc ul { margin: 0; }
 .revision-mode .notes-toc li { margin: 1px 0; }

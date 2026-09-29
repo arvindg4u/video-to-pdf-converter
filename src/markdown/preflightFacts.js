@@ -30,7 +30,19 @@ const isMath = (node) => classes(node).some((c) => ['math-inline', 'math-display
 /** Runs after sanitization/resource filtering, before KaTeX expands its DOM. */
 export function collectPreflightFacts() {
   return (tree, file) => {
-    const facts = { headings: [], tables: [], callouts: 0, math: 0, codeBlocks: 0, tasks: 0, words: 0, ...file.data.preflightResources }
+    const diagramStats = file.data.diagramStats || {}
+    const facts = {
+      headings: [],
+      tables: [],
+      callouts: 0,
+      math: 0,
+      codeBlocks: 0,
+      tasks: 0,
+      words: 0,
+      graphs: diagramStats.mathGraphs || 0,
+      diagrams: (diagramStats.mermaidDiagrams || 0) + (diagramStats.geometryDiagrams || 0),
+      ...file.data.preflightResources,
+    }
     const prose = []
     function visit(node) {
       if (node.properties?.dataFootnotes !== undefined) return
@@ -38,7 +50,7 @@ export function collectPreflightFacts() {
       if (isMath(node)) { facts.math++; return }
       if (node.tagName === 'pre') {
         if (node.children?.some(isMath)) facts.math++
-        else facts.codeBlocks++
+        else if (!classes(node).includes('mermaid-diagram')) facts.codeBlocks++
         return
       }
       if (node.tagName === 'code') return
