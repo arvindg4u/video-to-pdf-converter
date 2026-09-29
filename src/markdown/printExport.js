@@ -1,3 +1,5 @@
+import { renderMermaidDiagrams } from './mermaidClient.js'
+
 /** Browser-print transaction. No parsing, resource fetching, or pagination. */
 export const RESOURCE_TIMEOUT_MS = 15000
 export const PRINT_TIMEOUT_MS = 120000
@@ -47,6 +49,14 @@ export async function printNotes({ frame, expectedDocument, isCurrent, signal, t
     for (const [node] of details) node.open = true
     for (const image of images) image.setAttribute('loading', 'eager')
     doc.title = sanitizePrintTitle(title)
+
+    // Ensure all diagrams are fully rendered into SVGs before printing
+    try {
+      await renderMermaidDiagrams(doc)
+    } catch {
+      // Diagram rendering errors are caught gracefully within renderMermaidDiagrams
+    }
+
     // Opening disclosures must precede observing fonts.ready and image decode.
     doc.documentElement.getBoundingClientRect()
     const resourceStarted = now()

@@ -9,6 +9,8 @@ export function analyzePreflight(facts = {}, { mode = 'study', paper = 'A4', pro
     words: facts.words || 0, characters: facts.characters || 0, headings: headings.length,
     h1: headings.filter((h) => h.level === 1).length, h2: headings.filter((h) => h.level === 2).length, h3: headings.filter((h) => h.level === 3).length,
     tables: tables.length, images: images.length, callouts: facts.callouts || 0, math: facts.math || 0, codeBlocks: facts.codeBlocks || 0, tasks: facts.tasks || 0,
+    ...(facts.graphs ? { graphs: facts.graphs } : {}),
+    ...(facts.diagrams ? { diagrams: facts.diagrams } : {}),
   }
   const findings = []
   const add = (code, severity, count, message, recommendation, names = []) => {
@@ -44,7 +46,7 @@ export function analyzePreflight(facts = {}, { mode = 'study', paper = 'A4', pro
   // Broad content-weight estimate, not measured pagination. Account for media,
   // table rows, heading spacing, and the existing H1 chapter-start policy.
   const capacity = (mode === 'revision' ? 650 : 500) * (paper === 'Letter' ? 0.94 : 1)
-  const weight = stats.words + headings.length * 12 + tables.reduce((sum, t) => sum + t.rows * 12, 0) + stats.images * 120 + stats.math * 10 + stats.codeBlocks * 50 + stats.callouts * 15
+  const weight = stats.words + headings.length * 12 + tables.reduce((sum, t) => sum + t.rows * 12, 0) + stats.images * 120 + stats.math * 10 + stats.codeBlocks * 50 + stats.callouts * 15 + (facts.graphs || 0) * 90 + (facts.diagrams || 0) * 90
   const estimatedPages = processingError ? null : facts.characters ? Math.max(1, stats.h1, Math.ceil(weight / capacity)) : 0
   return { stats, estimatedPages, findings, warningCount: findings.filter((f) => f.severity === 'warning').length, errorCount: findings.filter((f) => f.severity === 'error').length, infoCount: findings.filter((f) => f.severity === 'info').length }
 }

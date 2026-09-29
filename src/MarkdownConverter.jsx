@@ -15,7 +15,9 @@ import { prepareMarkdown } from './markdown/obsidian'
 import { bindPreviewNavigation } from './markdown/navigation'
 import { NOTES_FONTS, readNotesFont, writeNotesFont } from './markdown/notesFont.js'
 import { ingestAssets } from './markdown/assets'
+import { renderMermaidDiagrams } from './markdown/mermaidClient.js'
 import './MarkdownConverter.css'
+
 const documentStyles = `${katexStyles}\n${fontStyles}\n${studyStyles}\n${profileStyles}\n${handwritingStyles}`
 
 export default function MarkdownConverter({ onBusyChange }) {
@@ -103,6 +105,7 @@ export default function MarkdownConverter({ onBusyChange }) {
       if (doc && doc !== previousDocument && doc.readyState !== 'loading' && doc.querySelector('meta[name="pdf-lab-preview"]')?.content === previewSnapshot.token) {
         readyDocumentRef.current = doc
         unbindNavigation = bindPreviewNavigation(doc)
+        renderMermaidDiagrams(doc).catch((err) => console.warn('[mermaid] Preview render error:', err))
         setLoadedDocument(documentHtml)
       } else {
         timer = setTimeout(checkDocument, 50)
@@ -162,7 +165,7 @@ export default function MarkdownConverter({ onBusyChange }) {
     exportRef.current = controller
     setExporting(true)
     setError('')
-    setStatus('Preparing fonts and images…')
+    setStatus('Preparing fonts and diagrams…')
     const frame = previewRef.current
     try {
       const result = await printNotes({
@@ -210,6 +213,8 @@ export default function MarkdownConverter({ onBusyChange }) {
               <h3>1. Add your notes</h3>
               <InfoTip label="Notes and images">
                 <p>One <strong>.md</strong> or <strong>.markdown</strong> file up to {MAX_FILE_SIZE_LABEL}, UTF-8. Obsidian notes work: frontmatter is kept as metadata, callouts, wikilinks and tags render as study blocks.</p>
+                <h4>Math diagrams &amp; graphs</h4>
+                <p>Native vector SVG plots and diagrams directly from Markdown code blocks: <code>```plot</code>, <code>```math-graph</code>, <code>```geometry</code>, <code>```tikz</code>, and <code>```mermaid</code>.</p>
                 <h4>Local images</h4>
                 <p>A .md file alone cannot reach its vault, so add images explicitly: pick the folder that relative image paths start from (for <code>attachments/image.png</code>, the folder containing <code>attachments</code>) or select image files. Only PNG, JPEG, GIF and WebP files are read — notes in that folder are not imported.</p>
                 <p>Limits: 200 files, 10 MB per image, 40 MB in total. Choosing a new note or the sample clears the images. Remote HTTP(S) images still load from the internet.</p>
@@ -287,10 +292,14 @@ export default function MarkdownConverter({ onBusyChange }) {
               <h3><label htmlFor="markdown-source">3. Edit Markdown</label></h3>
               <InfoTip label="Supported Markdown">
                 <p>Headings, emphasis, nested lists, tables, task lists, links, images, blockquotes, code, footnotes, safe HTML and LaTeX math (<code>$…$</code> / <code>$$…$$</code>).</p>
+                <h4>Math Graphs &amp; Diagrams</h4>
+                <p><strong>Math function plots</strong> (<code>```plot</code> or <code>```math-graph</code>): plot functions (<code>y = x^2</code>, <code>sin(x)</code>, polynomials), tangent lines, integral shaded areas, and point markers (<code>point: (x, y)</code>).</p>
+                <p><strong>Geometry diagrams</strong> (<code>```geometry</code> or <code>```tikz</code>): triangles, circles, polygons, vectors, and angle markings.</p>
+                <p><strong>Mermaid diagrams</strong> (<code>```mermaid</code>): flowcharts, mindmaps, state diagrams, and logic trees.</p>
                 <h4>Obsidian</h4>
-                <p>YAML frontmatter is kept as metadata and left out of the notes (its <code>title</code> becomes the document title). Callouts (<code>&gt; [!NOTE]</code>, <code>[!TIP]</code>, <code>[!WARNING]</code>, collapsible <code>+</code>/<code>−</code>, custom titles, aliases such as <code>[!INFO]</code>) render as calm study blocks. Wikilinks show readable labels; heading and block links inside the document resolve when present. Tags render as subtle metadata.</p>
+                <p>YAML frontmatter is kept as metadata and left out of the notes (its <code>title</code> becomes the document title). Callouts (<code>&gt; [!NOTE]</code>, <code>[!TIP]</code>, <code>[!WARNING]</code>, collapsible <code>+</code>/<code>−</code>, custom titles) render as calm study blocks. Wikilinks show readable labels; tags render as subtle metadata.</p>
                 <h4>Images</h4>
-                <p>Relative image paths and Obsidian embeds resolve only from the images you added (exact paths, or a unique filename). Remote HTTP(S) images and raster data URLs work; scripts and unsafe HTML are removed. Mermaid and embedded notes are not rendered.</p>
+                <p>Relative image paths and Obsidian embeds resolve from the images you added. Remote HTTP(S) images and raster data URLs work; scripts and unsafe HTML are removed.</p>
               </InfoTip>
             </div>
             <span className="muted">{source.length.toLocaleString()} characters</span>
@@ -301,7 +310,7 @@ export default function MarkdownConverter({ onBusyChange }) {
             </p>
           )}
           <textarea id="markdown-source" value={source} maxLength={MAX_FILE_SIZE} spellCheck={false} disabled={busy}
-            placeholder={'# Your study notes\n\nPaste Markdown here, upload a .md file, or try the sample.\n\n## Key concepts\n- **Important idea**\n- [ ] Review before the exam\n\n> A useful takeaway\n\nInline math: $E = mc^2$'}
+            placeholder={'# Math & Science Notes\n\n## 1. Calculus: Parabola and Tangent\n\n```plot\ntitle: Quadratic Function & Tangent\ndomain: [-4, 4]\nrange: [-2, 10]\ngrid: true\ny = x^2 - 2, color: #2563eb, label: f(x) = x^2 - 2\ny = 2*x + 1, color: #dc2626, label: Tangent\npoint: (0, -2), label: Vertex (0, -2)\npoint: (3, 7), label: Intersection (3, 7)\narea: [0, 2], from: 0, to: x^2 - 2, fill: rgba(37, 99, 235, 0.15)\n```\n\n## 2. Logic Flow\n\n```mermaid\ngraph TD\n    A[Input Data] --> B{Valid Condition?}\n    B -- Yes --> C[Process Equation]\n    B -- No --> D[Error Correction]\n```\n\nInline math: $E = mc^2$ and $$\\int_0^2 (x^2 - 2)\\,dx$$'}
             onChange={(event) => { markChanged(); setSource(event.target.value); setStatus(''); setError('') }} />
         </section>
       </div>

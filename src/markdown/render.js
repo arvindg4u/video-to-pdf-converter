@@ -14,8 +14,9 @@ import { obsidianSyntax, resolveObsidianAnchors } from './syntax.js'
 import { studyNavigation, resolveDocumentMetadata } from './navigation.js'
 import { splitFrontmatter } from './obsidian.js'
 import { CALLOUT_CLASS_PATTERN, remarkCallouts } from './callouts.js'
+import { rehypeDiagrams } from './diagrams.js'
 
-// Sanitize untrusted HTML BEFORE KaTeX/highlighting add their trusted markup.
+// Sanitize untrusted HTML BEFORE KaTeX/highlighting/diagrams add their trusted markup.
 const schema = {
   ...defaultSchema,
   attributes: {
@@ -88,6 +89,7 @@ const processor = (options) => unified()
   .use(rehypeSanitize, schema)
   .use(safeResources)
   .use(collectPreflightFacts)
+  .use(rehypeDiagrams)
   .use(rehypeKatex, { trust: false, strict: 'ignore', throwOnError: false })
   .use(rehypeHighlight, { detect: false, ignoreMissing: true })
   .use(studyNavigation)

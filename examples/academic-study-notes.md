@@ -20,6 +20,18 @@ $$
 R(t) = e^{-\frac{t}{S}}, \qquad \lim_{t \to \infty} R(t) = 0
 $$
 
+```plot
+title: Ebbinghaus Forgetting Curve & Retention
+domain: [0, 10]
+range: [0, 1.1]
+grid: true
+y = exp(-x/2), color: #dc2626, label: Without review: R(t) = e^(-t/2)
+y = exp(-x/6), color: #2563eb, label: With 1st review: R(t) = e^(-t/6)
+point: (0, 1), label: 100% Initial Learning
+point: (2, 0.37), label: ~37% Retention at t=2
+area: [0, 5], from: 0, to: exp(-x/6), fill: rgba(37, 99, 235, 0.12)
+```
+
 ## 2. Compare study strategies
 
 | Strategy | What you do | Best use |
@@ -35,6 +47,15 @@ $$
    - Identify gaps in your explanation.
    - Write one question for each gap.
 3. Review the questions tomorrow.
+
+```mermaid
+graph TD
+    A[Read Topic] --> B[Active Recall Test]
+    B --> C{Retrieved Successfully?}
+    C -- Yes --> D[Schedule Spaced Review]
+    C -- No --> E[Review Notes & Re-test]
+    E --> B
+```
 
 ### A simple review schedule
 
